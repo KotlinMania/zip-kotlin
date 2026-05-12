@@ -207,7 +207,7 @@ let mut writer = ZipWriter::new_append(writer.finish()?)?;
 
 ```kotlin
 dependencies {
-    implementation("io.github.kotlinmania:zip-kotlin:0.1.0-SNAPSHOT")
+    implementation("io.github.kotlinmania:zip-kotlin:0.1.0")
 }
 ```
 
