@@ -34,3 +34,14 @@ jobs:
           compileKotlinLinuxArm64
           linuxX64Test
           --no-configuration-cache
+
+      - name: Upload test reports (Linux)
+        if: success() || failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports-linux
+          path: |
+            build/reports/tests/
+            build/test-results/
+          retention-days: 7
+          if-no-files-found: warn
