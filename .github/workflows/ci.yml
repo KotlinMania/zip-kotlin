@@ -1,7 +1,15 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 # Least-privilege default for any inline job in this file. The reusable
 # workflows invoked below declare their own permissions; this top-level

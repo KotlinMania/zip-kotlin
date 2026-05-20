@@ -10,6 +10,7 @@ jobs:
   build:
     name: Build and Test (Windows)
     runs-on: windows-latest
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -28,7 +29,11 @@ jobs:
           cache-provider: basic
 
       - name: Build and test Windows target
-        run: ./gradlew mingwX64Test --no-configuration-cache
+        run: >
+          ./gradlew
+          setupAndroidSdk
+          mingwX64Test
+          --no-configuration-cache
 
       - name: Upload test reports (Windows)
         if: success() || failure()

@@ -10,6 +10,7 @@ jobs:
   build:
     name: Build and Test (tvOS)
     runs-on: macos-latest
+    timeout-minutes: 45
     permissions:
       contents: read
     steps:
