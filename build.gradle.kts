@@ -201,14 +201,12 @@ kotlin {
     iosSimulatorArm64 {
         binaries.framework {
             baseName = "Zip"
-            isStatic = true
             xcf.add(this)
         }
     }
     iosX64 {
         binaries.framework {
             baseName = "Zip"
-            isStatic = true
             xcf.add(this)
         }
     }
