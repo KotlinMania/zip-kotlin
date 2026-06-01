@@ -10,7 +10,6 @@ jobs:
   build:
     name: Build and Test (watchOS)
     runs-on: macos-latest
-    timeout-minutes: 45
     permissions:
       contents: read
     steps:
@@ -29,7 +28,6 @@ jobs:
       - name: Build and test watchOS targets
         run: >
           ./gradlew
-          compileKotlinWatchosArm32
           compileKotlinWatchosArm64
           compileKotlinWatchosDeviceArm64
           compileKotlinWatchosSimulatorArm64

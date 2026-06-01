@@ -4,15 +4,20 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
     }
-    plugins { kotlin("multiplatform") version "2.3.21" }
 }
 
 plugins { id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0" }
 
 dependencyResolutionManagement {
+    defaultLibrariesExtensionName = "projectLibs"
     repositories {
         google()
         mavenCentral()
+    }
+    versionCatalogs {
+        create("libs") {
+            from(files("gradle/libs.versions.toml"))
+        }
     }
 }
 
