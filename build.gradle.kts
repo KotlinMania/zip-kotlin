@@ -197,7 +197,12 @@ fun installProjectAndroidSdk(execOperations: ExecOperations) {
     println("setup-android-sdk: done; SDK at $projectAndroidSdkDir")
 }
 
-writeAndroidLocalProperties()
+// The Android Gradle plugin resolves the SDK location while Gradle configures
+// the android target, before any task executes, so the project-local SDK must
+// already be installed by this point. This configuration-time installer is
+// idempotent and always refreshes local.properties to the repo-local SDK path.
+val androidSdkExecOperations = serviceOf<ExecOperations>()
+installProjectAndroidSdk(androidSdkExecOperations)
 
 val ensureAndroidSdk by tasks.registering {
     group = "setup"
@@ -636,6 +641,60 @@ tasks.register("hostTests") {
         listOf("jvmTest", "macosArm64Test", "jsNodeTest", "wasmJsNodeTest", "wasmWasiNodeTest", "testAndroidHostTest")
             .mapNotNull { tasks.findByName(it) },
     )
+}
+
+tasks.register("test") {
+    group = "verification"
+    description = "Runs the documented local test gate (hostTests plus the Swift Export smoke test)."
+    dependsOn("hostTests")
+    dependsOn("swiftExportSmokeTest")
+}
+
+// The generated Wasm-WASI Node test runner cannot see the filesystem unless
+// the project directory is preopened. Patch the runner before wasmWasiNodeTest.
+val patchWasmWasiNodePreopens =
+    tasks.register("patchWasmWasiNodePreopens") {
+        group = "verification"
+        description = "Preopen the project directory for the generated Wasm-WASI Node test runner."
+        dependsOn("compileTestDevelopmentExecutableKotlinWasmWasi")
+        outputs.upToDateWhen { false }
+
+        doLast {
+            val runnerFile =
+                layout.buildDirectory.file(
+                    "compileSync/wasmWasi/test/testDevelopmentExecutable/kotlin/${rootProject.name}-test.mjs",
+                ).get().asFile
+            if (!runnerFile.exists()) {
+                return@doLast
+            }
+
+            val text = runnerFile.readText()
+            val withCwdImport =
+                when {
+                    "import { argv, env, cwd } from 'node:process';" in text -> text
+                    "import { argv, env } from 'node:process';" in text ->
+                        text.replace(
+                            "import { argv, env } from 'node:process';",
+                            "import { argv, env, cwd } from 'node:process';",
+                        )
+                    else -> throw GradleException("Unable to patch Wasm-WASI runner import in $runnerFile")
+                }
+            val patched =
+                when {
+                    "preopens: { '/': cwd() }" in withCwdImport -> withCwdImport
+                    "const wasi = new WASI({ version: 'preview1', args: argv, env, });" in withCwdImport ->
+                        withCwdImport.replace(
+                            "const wasi = new WASI({ version: 'preview1', args: argv, env, });",
+                            "const wasi = new WASI({ version: 'preview1', args: argv, env, preopens: { '/': cwd() }, });",
+                        )
+                    else -> throw GradleException("Unable to patch Wasm-WASI runner preopens in $runnerFile")
+                }
+            runnerFile.writeText(patched)
+        }
+    }
+
+tasks.named("wasmWasiNodeTest") {
+    dependsOn(patchWasmWasiNodePreopens)
 }
 
 // Skip embedSwiftExportForXcode unless Xcode env is present or task is explicitly requested.
