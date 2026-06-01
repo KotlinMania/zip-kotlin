@@ -362,7 +362,10 @@ detekt {
     allRules = false
     autoCorrect = false
     source.setFrom(files("src"))
-    config.setFrom(files("detekt.yml"))
+    val detektConfig = file("detekt.yml")
+    if (detektConfig.exists()) {
+        config.setFrom(detektConfig)
+    }
     parallel = true
 }
 
@@ -689,34 +692,41 @@ tasks.register("swiftExportSmokeTest") {
 
     doLast {
         val execOperations = serviceOf<ExecOperations>()
-        val swiftBuildDir = layout.buildDirectory.dir("swift-test").get().asFile.absolutePath
-        execOperations.exec {
-            workingDir = projectDir
-            commandLine(
-                "./gradlew",
-                "embedSwiftExportForXcode",
-                "--no-configuration-cache",
-                "--no-daemon",
-                "--console=plain",
-            )
-            environment(
-                mapOf(
-                    "BUILT_PRODUCTS_DIR" to swiftBuildDir,
-                    "TARGET_BUILD_DIR" to swiftBuildDir,
-                    "SDK_NAME" to "macosx",
-                    "CONFIGURATION" to "Debug",
-                    "ARCHS" to "arm64",
-                    "FRAMEWORKS_FOLDER_PATH" to "Frameworks",
-                    "MACOSX_DEPLOYMENT_TARGET" to "14.0",
-                    "DEPLOYMENT_TARGET_SETTING_NAME" to "MACOSX_DEPLOYMENT_TARGET",
-                ),
-            )
-        }.assertNormalExitValue()
+        val swiftBuildDir =
+            layout.buildDirectory
+                .dir("swift-test")
+                .get()
+                .asFile
+                .absolutePath
+        execOperations
+            .exec {
+                workingDir = projectDir
+                commandLine(
+                    "./gradlew",
+                    "embedSwiftExportForXcode",
+                    "--no-configuration-cache",
+                    "--no-daemon",
+                    "--console=plain",
+                )
+                environment(
+                    mapOf(
+                        "BUILT_PRODUCTS_DIR" to swiftBuildDir,
+                        "TARGET_BUILD_DIR" to swiftBuildDir,
+                        "SDK_NAME" to "macosx",
+                        "CONFIGURATION" to "Debug",
+                        "ARCHS" to "arm64",
+                        "FRAMEWORKS_FOLDER_PATH" to "Frameworks",
+                        "MACOSX_DEPLOYMENT_TARGET" to "14.0",
+                        "DEPLOYMENT_TARGET_SETTING_NAME" to "MACOSX_DEPLOYMENT_TARGET",
+                    ),
+                )
+            }.assertNormalExitValue()
 
-        execOperations.exec {
-            workingDir = layout.projectDirectory.dir("swift-test-harness").asFile
-            commandLine("swift", "test")
-        }.assertNormalExitValue()
+        execOperations
+            .exec {
+                workingDir = layout.projectDirectory.dir("swift-test-harness").asFile
+                commandLine("swift", "test")
+            }.assertNormalExitValue()
     }
 }
 
