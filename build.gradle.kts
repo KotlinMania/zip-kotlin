@@ -213,7 +213,11 @@ fun installProjectAndroidSdk(execOperations: ExecOperations) {
     println("setup-android-sdk: done; SDK at $projectAndroidSdkDir")
 }
 
-writeAndroidLocalProperties()
+if (!isProjectAndroidSdkInstalled()) {
+    installProjectAndroidSdk(serviceOf())
+} else {
+    writeAndroidLocalProperties()
+}
 
 val ensureAndroidSdk by tasks.registering {
     group = "setup"
@@ -348,15 +352,15 @@ kotlin {
     }
 }
 
+// ============================================================================
+// Test logging
+// ============================================================================
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
     if (name.startsWith("compileSwiftExport")) {
         compilerOptions.allWarningsAsErrors.set(false)
     }
 }
 
-// ============================================================================
-// Test logging
-// ============================================================================
 tasks.withType<AbstractTestTask>().configureEach {
     testLogging {
         events(
@@ -692,6 +696,18 @@ tasks.register("hostTests") {
         "wasmWasiNodeTest",
         "testAndroidHostTest",
     )
+}
+
+if ("test" in tasks.names) {
+    tasks.named("test") {
+        dependsOn("hostTests", "swiftExportSmokeTest")
+    }
+} else {
+    tasks.register("test") {
+        group = "verification"
+        description = "Alias for the repo's required host test suite and Swift Export smoke test."
+        dependsOn("hostTests", "swiftExportSmokeTest")
+    }
 }
 
 // Swift Export smoke test — produces the SPM package via embedSwiftExportForXcode
