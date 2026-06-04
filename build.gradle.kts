@@ -1,4 +1,5 @@
 import org.gradle.api.GradleException
+import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.api.file.ArchiveOperations
 import org.gradle.api.file.FileSystemOperations
 import org.gradle.api.tasks.ClasspathNormalizer
@@ -39,12 +40,21 @@ version = providers.gradleProperty("project.version").getOrElse("0.1.0-SNAPSHOT"
 val frameworkName = providers.gradleProperty("project.frameworkName").getOrElse("Unnamed")
 val projectNamespace = providers.gradleProperty("project.namespace").getOrElse("io.github.kotlinmania")
 val kotlinVersion = providers.gradleProperty("versions.kotlin").getOrElse("2.3.21")
+val isCodeqlBuild = providers.gradleProperty("kotlinmania.codeql").map(String::toBoolean).getOrElse(false)
+val commonMainBundleName = providers.gradleProperty("project.dependencies.commonMainBundle").get()
+val commonMainDependencyBundle =
+    extensions
+        .getByType(VersionCatalogsExtension::class.java)
+        .named("libs")
+        .findBundle(commonMainBundleName)
+        .orElseThrow { GradleException("Missing libs bundle '$commonMainBundleName'") }
 
 // Opt-ins shared between the top-level compilerOptions and the codeqlCompileJvm kotlinc invocation.
 val commonOptIns =
     listOf(
         "kotlin.time.ExperimentalTime",
         "kotlin.concurrent.atomics.ExperimentalAtomicApi",
+        "kotlin.ExperimentalUnsignedTypes",
     )
 
 // ============================================================================
@@ -58,7 +68,11 @@ val commonOptIns =
 // the first time they touch the project.
 // ============================================================================
 
-val androidCommandLineToolsRevision = providers.gradleProperty("android.commandLineTools.revision").getOrElse("14742923")
+val androidCommandLineToolsRevision =
+    providers
+        .gradleProperty(
+            "android.commandLineTools.revision",
+        ).getOrElse("14742923")
 val projectCompileSdk = providers.gradleProperty("android.compileSdk").getOrElse("34")
 val projectAndroidBuildTools = providers.gradleProperty("android.buildTools").getOrElse("36.0.0")
 val osName = providers.systemProperty("os.name").get().lowercase()
@@ -167,7 +181,9 @@ fun installProjectAndroidSdk(execOperations: ExecOperations) {
     if (licenseResult.exitValue != 0) {
         throw GradleException("Android SDK license acceptance failed with exit code ${licenseResult.exitValue}")
     }
-    println("setup-android-sdk: installing platform-tools, android-$projectCompileSdk, build-tools;$projectAndroidBuildTools")
+    println(
+        "setup-android-sdk: installing platform-tools, android-$projectCompileSdk, build-tools;$projectAndroidBuildTools",
+    )
     val installLog = projectAndroidSdkDir.resolve("sdkmanager-install.log")
     installLog.parentFile.mkdirs()
     installLog.outputStream().use { output ->
@@ -197,12 +213,7 @@ fun installProjectAndroidSdk(execOperations: ExecOperations) {
     println("setup-android-sdk: done; SDK at $projectAndroidSdkDir")
 }
 
-// The Android Gradle plugin resolves the SDK location while Gradle configures
-// the android target, before any task executes, so the project-local SDK must
-// already be installed by this point. This configuration-time installer is
-// idempotent and always refreshes local.properties to the repo-local SDK path.
-val androidSdkExecOperations = serviceOf<ExecOperations>()
-installProjectAndroidSdk(androidSdkExecOperations)
+writeAndroidLocalProperties()
 
 val ensureAndroidSdk by tasks.registering {
     group = "setup"
@@ -222,14 +233,13 @@ val jvmToolchainVersion = providers.gradleProperty("jvm.toolchain").getOrElse("2
 // ============================================================================
 // kotlin { … }
 // ----------------------------------------------------------------------------
-// The retired 32-bit watchOS target is intentionally absent by workspace
-// product policy (AGENTS.md §5.5.1, effective 2026-05-24). Upstream KGP still
-// ships it as Tier 2 — this is a deliberate product decision, not a framework
-// deprecation.
+// watchosArm32: retired by workspace product policy (kmp-watchosarm32-retirement
+//   per AGENTS.md §5.5.1, effective 2026-05-24). Upstream KGP still ships it as
+//   Tier 2 — this is a deliberate product decision, not a framework deprecation.
 // Deprecated by KGP since 2.3.20 (never re-add): macosX64, tvosX64, watchosX64.
 // Every other target is built unconditionally — KotlinMania supports the full
 //   target surface, so there are NO opt-in build gates. The build gate is the
-//   contract that forces every configured target to compile.
+//   contract that forces every current KotlinMania target to compile.
 // ============================================================================
 kotlin {
     jvmToolchain(jvmToolchainVersion)
@@ -239,40 +249,37 @@ kotlin {
     compilerOptions {
         languageVersion.set(KotlinVersion.KOTLIN_2_3)
         apiVersion.set(KotlinVersion.KOTLIN_2_3)
-        allWarningsAsErrors.set(true)
+        allWarningsAsErrors.set(!isCodeqlBuild)
         optIn.addAll(commonOptIns)
         freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 
     val xcf = XCFramework(frameworkName)
+    val frameworkBundleId = projectNamespace
 
     // Local helper: attach this target's framework to the XCFramework.
-    // deploymentTarget follows Kotlin 2.3.0 raised minimums: iOS/tvOS→14.0, watchOS→7.0, macOS→11.0.
-    fun KotlinNativeTarget.addToXcf(
-        static: Boolean = false,
-        deploymentTarget: String,
-    ) {
+    fun KotlinNativeTarget.addToXcf(static: Boolean = false) {
         binaries.framework {
             baseName = frameworkName
             if (static) isStatic = true
             xcf.add(this)
-            binaryOption("deploymentTarget", deploymentTarget)
+            binaryOption("bundleId", frameworkBundleId)
         }
     }
 
     // Apple — Tier 1/2 targets
-    macosArm64 { addToXcf(deploymentTarget = "11.0") }
-    iosArm64 { addToXcf(static = true, deploymentTarget = "14.0") }
-    iosSimulatorArm64 { addToXcf(static = true, deploymentTarget = "14.0") }
-    tvosArm64 { addToXcf(deploymentTarget = "14.0") }
-    tvosSimulatorArm64 { addToXcf(deploymentTarget = "14.0") }
-    watchosArm64 { addToXcf(deploymentTarget = "7.0") }
-    watchosDeviceArm64 { addToXcf(deploymentTarget = "7.0") }
-    watchosSimulatorArm64 { addToXcf(deploymentTarget = "7.0") }
+    macosArm64 { addToXcf() }
+    iosArm64 { addToXcf(static = true) }
+    iosSimulatorArm64 { addToXcf(static = true) }
+    tvosArm64 { addToXcf() }
+    tvosSimulatorArm64 { addToXcf() }
+    watchosArm64 { addToXcf() }
+    watchosDeviceArm64 { addToXcf() }
+    watchosSimulatorArm64 { addToXcf() }
 
     // iosX64: Intel Mac simulator. Tier 3 in Kotlin/Native but NOT deprecated —
     // Apple still ships x86_64 iOS simulator runtimes, so it is always built.
-    iosX64 { addToXcf(static = true, deploymentTarget = "14.0") }
+    iosX64 { addToXcf(static = true) }
 
     // Other native — Tier 1/2
     linuxX64()
@@ -309,6 +316,10 @@ kotlin {
     swiftExport {
         moduleName = frameworkName
         flattenPackage = projectNamespace
+        @OptIn(org.jetbrains.kotlin.gradle.swiftexport.ExperimentalSwiftExportDsl::class)
+        configure {
+            settings.put("enableCoroutinesSupport", "true")
+        }
     }
 
     // Android KMP library. Block name is `android` — `androidLibrary` is deprecated in KGP 2.3.x.
@@ -329,12 +340,17 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(libs.bundles.zip.commonMain)
+            implementation(commonMainDependencyBundle)
         }
         commonTest.dependencies {
             implementation(kotlin("test"))
-            implementation(libs.anyhow.kotlin)
         }
+    }
+}
+
+tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask<*>>().configureEach {
+    if (name.startsWith("compileSwiftExport")) {
+        compilerOptions.allWarningsAsErrors.set(false)
     }
 }
 
@@ -367,10 +383,7 @@ detekt {
     allRules = false
     autoCorrect = false
     source.setFrom(files("src"))
-    val detektConfig = file("detekt.yml")
-    if (detektConfig.exists()) {
-        config.setFrom(detektConfig)
-    }
+    config.setFrom(files("detekt.yml"))
     parallel = true
 }
 
@@ -402,13 +415,12 @@ ktlint {
 tasks.named("check") {
     dependsOn(tasks.withType<io.gitlab.arturbosch.detekt.Detekt>())
     dependsOn(tasks.named("ktlintCheck"))
-    // Android host unit tests run here alongside the host-runnable tests that
-    // check -> allTests already executes (jvm, macosArm64, the Apple simulators,
-    // js, wasmJs, wasmWasi). Test EXECUTION belongs to check, not to the
-    // all-target build set. Cross-OS targets (linux/mingw/android-native) and
-    // device slices can't execute on this host — they run on their own CI runner.
+    // Android host unit tests run here alongside the tests that check -> allTests
+    // already executes (jvm, macosArm64, the Apple simulators, js, wasmJs,
+    // wasmWasi). Test EXECUTION belongs to check; target BUILD coverage belongs
+    // to the explicit all-target build set below.
     dependsOn("testAndroidHostTest")
-    // Swift Export smoke test (macOS-only; self-skips elsewhere via onlyIf).
+    // Swift Export smoke test is required; it must not self-skip.
     dependsOn("swiftExportSmokeTest")
 }
 
@@ -419,6 +431,17 @@ val nodeVersion = providers.gradleProperty("node.version").getOrElse("24.15.0")
 val wasmNodeVersion = providers.gradleProperty("wasm.node.version").getOrElse(nodeVersion)
 val yarnVersion = providers.gradleProperty("yarn.version").getOrElse("1.22.22")
 val wasmYarnVersion = providers.gradleProperty("wasm.yarn.version").getOrElse(yarnVersion)
+
+// webpack is pinned in kotlin-js-store/package.json — the single source of truth
+// that Dependabot updates natively. Gradle reads the version from there so the
+// yarn resolution and the NodeJsRootExtension pin always track the checked-in
+// store; a Dependabot bump of package.json/yarn.lock is honored rather than
+// overridden. (These two values previously lived in gradle.properties, which
+// Dependabot cannot see, so a bump there would silently revert the build.)
+@Suppress("UNCHECKED_CAST")
+val webpackVersion: String =
+    (groovy.json.JsonSlurper().parse(rootProject.file("kotlin-js-store/package.json")) as Map<String, Any>)
+        .let { it["dependencies"] as Map<String, Any> }["webpack"] as String
 
 rootProject.extensions.configure<NodeJsEnvSpec>("kotlinNodeJsSpec") { version.set(nodeVersion) }
 rootProject.extensions.configure<WasmNodeJsEnvSpec>("kotlinWasmNodeJsSpec") { version.set(wasmNodeVersion) }
@@ -434,6 +457,11 @@ rootProject.extensions.configure<YarnRootExtension>("kotlinYarn") {
             resolution(pkg, ver)
             resolution("**/$pkg", ver)
         }
+    // webpack resolution sourced from kotlin-js-store/package.json (see above)
+    // rather than a yarn.resolution.webpack property, so it can never override a
+    // Dependabot bump of the store.
+    resolution("webpack", webpackVersion)
+    resolution("**/webpack", webpackVersion)
 }
 
 val patchedKarmaWebpackPackage =
@@ -445,7 +473,7 @@ val patchedKarmaWebpackPackage =
 // TODO: NodeJsRootExtension.versions.* is deprecated and will be removed when the spec-based
 //       NodeJsEnvSpec API gains equivalent properties. Track KGP release notes before removing.
 rootProject.extensions.configure<NodeJsRootExtension>("kotlinNodeJs") {
-    versions.webpack.version = providers.gradleProperty("node.webpack.version").getOrElse("5.106.2")
+    versions.webpack.version = webpackVersion
     versions.webpackCli.version = providers.gradleProperty("node.webpackCli.version").getOrElse("7.0.2")
     versions.karma.version = providers.gradleProperty("node.karma.version").getOrElse("npm:karma-maintained@6.4.7")
     versions.karmaWebpack.version = "file:$patchedKarmaWebpackPackage"
@@ -471,7 +499,9 @@ mavenPublishing {
         licenses {
             license {
                 name.set(providers.gradleProperty("project.pom.licenseName").getOrElse("MIT"))
-                url.set(providers.gradleProperty("project.pom.licenseUrl").getOrElse("https://opensource.org/licenses/MIT"))
+                url.set(
+                    providers.gradleProperty("project.pom.licenseUrl").getOrElse("https://opensource.org/licenses/MIT"),
+                )
                 distribution.set("repo")
             }
         }
@@ -524,6 +554,22 @@ val codeqlLanguageVersion =
         .gradleProperty("kotlin.languageVersion")
         .getOrElse(kotlinVersion.split('.').take(2).joinToString("."))
 val codeqlApiVersion = providers.gradleProperty("kotlin.apiVersion").getOrElse(codeqlLanguageVersion)
+val codeqlKotlinSourceSetNames =
+    providers
+        .gradleProperty("project.codeql.kotlinSourceSets")
+        .getOrElse("commonMain")
+        .splitToSequence(",")
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .toList()
+val codeqlKotlinCommonSourceSetNames =
+    providers
+        .gradleProperty("project.codeql.kotlinCommonSourceSets")
+        .getOrElse("commonMain")
+        .splitToSequence(",")
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+        .toList()
 
 dependencies {
     val codeqlKotlinVersion = providers.gradleProperty("codeql.kotlin.version").getOrElse(kotlinVersion)
@@ -548,7 +594,9 @@ dependencies {
 
 val codeqlCompileJvm =
     tasks.register<JavaExec>("codeqlCompileJvm") {
-        description = "Compile commonMain Kotlin sources with kotlinc $codeqlLanguageVersion for CodeQL Java/Kotlin extraction."
+        description =
+            "Compile ${codeqlKotlinSourceSetNames.joinToString(",")} Kotlin sources " +
+                "with kotlinc $codeqlLanguageVersion for CodeQL Java/Kotlin extraction."
         group = "verification"
         classpath(codeqlKotlincFiles)
         mainClass.set("org.jetbrains.kotlin.cli.jvm.K2JVMCompiler")
@@ -558,14 +606,24 @@ val codeqlCompileJvm =
         val archives = serviceOf<ArchiveOperations>()
         val outDir = layout.buildDirectory.dir("classes/kotlin/codeql-jvm")
         val aarExtractDir = layout.buildDirectory.dir("codeql/android-aar")
-        val sources = fileTree("src/commonMain/kotlin") { include("**/*.kt") }
-        val sentinelDir = layout.buildDirectory.dir("generated/codeql-empty-source")
+        val commonSources =
+            files(
+                codeqlKotlinCommonSourceSetNames.map { sourceSetName ->
+                    fileTree("src/$sourceSetName/kotlin") { include("**/*.kt") }
+                },
+            )
+        val sources =
+            files(
+                codeqlKotlinSourceSetNames.map { sourceSetName ->
+                    fileTree("src/$sourceSetName/kotlin") { include("**/*.kt") }
+                },
+            )
         inputs.files(sources).withPathSensitivity(PathSensitivity.RELATIVE)
+        inputs.files(commonSources).withPathSensitivity(PathSensitivity.RELATIVE)
         inputs.files(codeqlSourceFiles).withNormalizer(ClasspathNormalizer::class.java)
         inputs.files(codeqlAarFiles).withNormalizer(ClasspathNormalizer::class.java)
         outputs.dir(outDir)
         outputs.dir(aarExtractDir)
-        outputs.dir(sentinelDir)
         doFirst {
             outDir.get().asFile.mkdirs()
             val extractedJars =
@@ -582,23 +640,14 @@ val codeqlCompileJvm =
             val fullClasspath =
                 (codeqlSourceFiles.get().resolve() + extractedJars)
                     .joinToString(File.pathSeparator) { it.absolutePath }
-            val sourceFiles =
-                sources.files.toMutableList().ifEmpty {
-                    val sentinelFile =
-                        sentinelDir
-                            .get()
-                            .asFile
-                            .resolve("io/github/kotlinmania/codeql/_CodeqlEmptySource.kt")
-                    sentinelFile.parentFile.mkdirs()
-                    sentinelFile.writeText(
-                        """
-                        package io.github.kotlinmania.codeql
-
-                        private object _CodeqlEmptySource
-                        """.trimIndent(),
-                    )
-                    mutableListOf(sentinelFile)
-                }
+            val commonSourceFiles = commonSources.files.toMutableList()
+            require(commonSourceFiles.isNotEmpty()) {
+                "project.codeql.kotlinCommonSourceSets must resolve to at least one Kotlin source file"
+            }
+            val sourceFiles = sources.files.toMutableList()
+            require(sourceFiles.isNotEmpty()) {
+                "project.codeql.kotlinSourceSets must resolve to at least one Kotlin source file"
+            }
             args = listOf(
                 "-d",
                 outDir.get().asFile.absolutePath,
@@ -613,7 +662,7 @@ val codeqlCompileJvm =
                 "-api-version",
                 codeqlApiVersion,
                 "-Xmulti-platform",
-                "-Xcommon-sources=${sourceFiles.joinToString(",") { it.absolutePath }}",
+                "-Xcommon-sources=${commonSourceFiles.joinToString(",") { it.absolutePath }}",
                 "-Xexpect-actual-classes",
             ) + commonOptIns.flatMap { listOf("-opt-in", it) } + sourceFiles.map { it.absolutePath }
         }
@@ -629,124 +678,30 @@ tasks.register("setupAndroidSdk") {
     dependsOn("ensureAndroidSdk")
 }
 
-// Host-portable test runner. Uses findByName so it degrades gracefully on hosts
-// that can't run a given platform (e.g. macosArm64Test is null on a Linux runner).
-// Named hostTests to avoid shadowing the KMP allTests lifecycle task.
-// testAndroidHostTest depends transitively on ensureAndroidSdk via compileAndroidMain,
-// so we list it unconditionally — findByName drops it on hosts without the Android target.
+// Explicit test runner. Named hostTests to avoid shadowing the KMP allTests
+// lifecycle task. Do not use findByName/mapNotNull here: missing test tasks
+// mean the target surface drifted and must fail loudly.
 tasks.register("hostTests") {
     group = "verification"
-    description = "Runs the host-portable real test suite (jvm, macosArm64, js, wasmJs, wasmWasi, android host)."
+    description = "Runs the required real test suite (jvm, macosArm64, js, wasmJs, wasmWasi, android host)."
     dependsOn(
-        listOf("jvmTest", "macosArm64Test", "jsNodeTest", "wasmJsNodeTest", "wasmWasiNodeTest", "testAndroidHostTest")
-            .mapNotNull { tasks.findByName(it) },
+        "jvmTest",
+        "macosArm64Test",
+        "jsNodeTest",
+        "wasmJsNodeTest",
+        "wasmWasiNodeTest",
+        "testAndroidHostTest",
     )
-}
-
-tasks.register("test") {
-    group = "verification"
-    description = "Runs the documented local test gate (hostTests plus the Swift Export smoke test)."
-    dependsOn("hostTests")
-    dependsOn("swiftExportSmokeTest")
-}
-
-// The generated Wasm-WASI Node test runner cannot see the filesystem unless
-// the project directory is preopened. Patch the runner before wasmWasiNodeTest.
-val patchWasmWasiNodePreopens =
-    tasks.register("patchWasmWasiNodePreopens") {
-        group = "verification"
-        description = "Preopen the project directory for the generated Wasm-WASI Node test runner."
-        dependsOn("compileTestDevelopmentExecutableKotlinWasmWasi")
-        outputs.upToDateWhen { false }
-
-        doLast {
-            val runnerFile =
-                layout.buildDirectory.file(
-                    "compileSync/wasmWasi/test/testDevelopmentExecutable/kotlin/${rootProject.name}-test.mjs",
-                ).get().asFile
-            if (!runnerFile.exists()) {
-                return@doLast
-            }
-
-            val text = runnerFile.readText()
-            val withCwdImport =
-                when {
-                    "import { argv, env, cwd } from 'node:process';" in text -> text
-                    "import { argv, env } from 'node:process';" in text ->
-                        text.replace(
-                            "import { argv, env } from 'node:process';",
-                            "import { argv, env, cwd } from 'node:process';",
-                        )
-                    else -> throw GradleException("Unable to patch Wasm-WASI runner import in $runnerFile")
-                }
-            val patched =
-                when {
-                    "preopens: { '/': cwd() }" in withCwdImport -> withCwdImport
-                    "const wasi = new WASI({ version: 'preview1', args: argv, env, });" in withCwdImport ->
-                        withCwdImport.replace(
-                            "const wasi = new WASI({ version: 'preview1', args: argv, env, });",
-                            "const wasi = new WASI({ version: 'preview1', args: argv, env, preopens: { '/': cwd() }, });",
-                        )
-                    else -> throw GradleException("Unable to patch Wasm-WASI runner preopens in $runnerFile")
-                }
-            runnerFile.writeText(patched)
-        }
-    }
-
-tasks.named("wasmWasiNodeTest") {
-    dependsOn(patchWasmWasiNodePreopens)
-}
-
-// Skip embedSwiftExportForXcode unless Xcode env is present or task is explicitly requested.
-val xcodeSwiftExportEnvironmentNames =
-    listOf(
-        "SDK_NAME",
-        "CONFIGURATION",
-        "TARGET_BUILD_DIR",
-        "BUILT_PRODUCTS_DIR",
-        "ARCHS",
-        "FRAMEWORKS_FOLDER_PATH",
-        "DEPLOYMENT_TARGET_SETTING_NAME",
-    )
-
-fun hasXcodeSwiftExportEnvironment(): Boolean {
-    val allPresent =
-        xcodeSwiftExportEnvironmentNames.all {
-            !providers.environmentVariable(it).orNull.isNullOrBlank()
-        }
-    if (!allPresent) return false
-    val deploymentTarget = providers.environmentVariable("DEPLOYMENT_TARGET_SETTING_NAME").orNull ?: return false
-    return !providers.environmentVariable(deploymentTarget).orNull.isNullOrBlank()
-}
-
-val swiftExportTaskDirectlyRequested =
-    gradle.startParameter.taskNames.any {
-        it == "embedSwiftExportForXcode" || it.endsWith(":embedSwiftExportForXcode")
-    }
-
-tasks.matching { it.name == "embedSwiftExportForXcode" }.configureEach {
-    onlyIf("Xcode environment variables not present") {
-        val hasXcodeEnvironment = hasXcodeSwiftExportEnvironment()
-        if (!hasXcodeEnvironment && !swiftExportTaskDirectlyRequested) {
-            logger.lifecycle("embedSwiftExportForXcode: skipped because Xcode environment variables are not present")
-        }
-        hasXcodeEnvironment || swiftExportTaskDirectlyRequested
-    }
 }
 
 // Swift Export smoke test — produces the SPM package via embedSwiftExportForXcode
 // (spawned with the Xcode-style env it requires) and runs `swift test` against it,
 // so Swift Export breakage surfaces locally, not only in the swift.yml CI job.
-// Pattern mirrors kasuari-kotlin. macOS-only; skipped elsewhere.
+// Pattern mirrors kasuari-kotlin. This task is part of the build contract and
+// must fail rather than skip when the required toolchain is unavailable.
 tasks.register("swiftExportSmokeTest") {
     group = "verification"
     description = "Builds the Swift Export SPM package and runs swift test against it."
-    onlyIf {
-        if (!isMacHost) {
-            logger.lifecycle("swiftExportSmokeTest: skipped because Swift Export smoke tests require macOS")
-        }
-        isMacHost
-    }
     outputs.upToDateWhen { false }
 
     doLast {
@@ -781,6 +736,20 @@ tasks.register("swiftExportSmokeTest") {
                 )
             }.assertNormalExitValue()
 
+        val generatedPackageSwift =
+            layout.buildDirectory.file("SPMPackage/macosArm64/Debug/Package.swift").get().asFile
+        if (generatedPackageSwift.exists()) {
+            val text = generatedPackageSwift.readText()
+            if (!text.contains("platforms:")) {
+                generatedPackageSwift.writeText(
+                    text.replaceFirst(
+                        Regex("(name:\\s*\"[^\"]*\",)"),
+                        "\$1\n    platforms: [.macOS(.v14)],",
+                    ),
+                )
+            }
+        }
+
         execOperations
             .exec {
                 workingDir = layout.projectDirectory.dir("swift-test-harness").asFile
@@ -792,12 +761,12 @@ tasks.register("swiftExportSmokeTest") {
 // ============================================================================
 // `build` aggregate
 // ----------------------------------------------------------------------------
-// tasks.matching returns a live TaskCollection — no afterEvaluate needed.
-// KMP tasks registered after kotlin { } are captured automatically.
-// ============================================================================
 // Every configured native target, unconditionally. This is the audit contract —
-// it must mirror the kotlin { } target block exactly. The legacy 32-bit watchOS
-// target is retired (see §5.5.1); everything else MUST build.
+// it must mirror the kotlin { } target block exactly. watchosArm32 is the only
+// retired native target (see §5.5.1); everything else MUST build.
+// Do not add a dynamic tasks.matching fallback here: copied templates must make
+// the target surface explicit so missing declarations fail loudly in review.
+// ============================================================================
 val nativeTargetNames =
     listOf(
         "androidNativeArm32",
@@ -837,7 +806,7 @@ val fullTargetBuildTaskNames =
                 "wasmJsTestClasses",
                 "wasmWasiMainClasses",
                 "wasmWasiTestClasses",
-                "embedSwiftExportForXcode",
+                "swiftExportSmokeTest",
                 "assemble${frameworkName}XCFramework",
             ),
         )
@@ -849,17 +818,4 @@ val fullTargetBuildTaskNames =
 
 tasks.named("build") {
     dependsOn(fullTargetBuildTaskNames)
-    dependsOn(
-        tasks.matching {
-            name.endsWith("MainClasses") ||
-                name.endsWith("TestClasses") ||
-                name.endsWith("Binaries") ||
-                name.endsWith("XCFramework") ||
-                name == "embedSwiftExportForXcode" ||
-                name.startsWith("exportCommonSourceSetsMetadataLocationsFor") ||
-                name.startsWith("exportRootPublicationCoordinatesFor") ||
-                name.startsWith("exportCrossCompilationMetadataFor") ||
-                name.startsWith("exportTargetPublicationCoordinatesFor")
-        },
-    )
 }

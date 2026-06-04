@@ -16,7 +16,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      # Android SDK is installed by ./gradlew setupAndroidSdk (project-local, idempotent).
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
       - name: Set up JDK 21
         uses: actions/setup-java@v5.2.0
         with:
