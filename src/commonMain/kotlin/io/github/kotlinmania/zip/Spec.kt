@@ -537,10 +537,18 @@ public data class Zip64CentralDirectoryEnd(
 }
 
 /**
- * Data associated with its position in an archive.
+ * Zip32 data associated with its position in an archive.
  */
-public data class DataAndPosition<T>(
-    public val data: T,
+public data class Zip32DataAndPosition(
+    public val data: Zip32CentralDirectoryEnd,
+    public val position: ULong,
+)
+
+/**
+ * Zip64 data associated with its position in an archive.
+ */
+public data class Zip64DataAndPosition(
+    public val data: Zip64CentralDirectoryEnd,
     public val position: ULong,
 )
 
@@ -548,8 +556,8 @@ public data class DataAndPosition<T>(
  * Result of finding central directory information.
  */
 public data class CentralDirectoryEndInfo(
-    public val eocd: DataAndPosition<Zip32CentralDirectoryEnd>,
-    public val eocd64: DataAndPosition<Zip64CentralDirectoryEnd>? = null,
+    public val eocd: Zip32DataAndPosition,
+    public val eocd64: Zip64DataAndPosition? = null,
     public val archiveOffset: ULong = 0uL,
 )
 
