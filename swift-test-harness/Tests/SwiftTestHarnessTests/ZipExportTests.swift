@@ -3,8 +3,10 @@ import Zip
 
 @Suite("Zip Swift Export Tests")
 struct ZipExportTests {
-    @Test("Zip swift module imported cleanly")
+    @Test("Zip constants and functions work from Swift")
     func swiftModuleLoads() {
-        #expect(Bool(true), "Zip swift module imported cleanly")
+        #expect(DEFAULT_VERSION >= 0)
+        let ch = cp437ToChar(input: 65)
+        #expect(ch == 65)
     }
 }
