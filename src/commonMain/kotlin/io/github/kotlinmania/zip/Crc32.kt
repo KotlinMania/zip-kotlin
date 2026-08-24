@@ -68,7 +68,7 @@ public class Crc32Reader(
     public fun read(buffer: ByteArray, offset: Int = 0, length: Int = buffer.size - offset): Int {
         if (position >= data.size) {
             if (length > 0 && isEnabled && !checkMatches()) {
-                throw ZipError.InvalidArchive("Invalid checksum")
+                throw invalidChecksum()
             }
             return 0
         }
@@ -79,7 +79,7 @@ public class Crc32Reader(
         }
         position += count
         if (position >= data.size && isEnabled && !checkMatches()) {
-            throw ZipError.InvalidArchive("Invalid checksum")
+            throw invalidChecksum()
         }
         return count
     }
@@ -91,6 +91,26 @@ public class Crc32Reader(
         return result
     }
 
+    public fun readToEnd(buf: MutableList<Byte>): Int {
+        val bytes = readAll()
+        for (b in bytes) {
+            buf.add(b)
+        }
+        return bytes.size
+    }
+
+    public fun readToString(): String = readAll().decodeToString()
+
     public fun checkMatches(): Boolean =
         checksum == hasher.finalize()
+
+    public fun intoInner(): ByteArray = data
+
+    public fun invalidChecksum(): ZipError =
+        ZipError.InvalidArchive("Invalid checksum")
+
+    public companion object {
+        public fun new(data: ByteArray, checksum: UInt, ae2Encrypted: Boolean = false): Crc32Reader =
+            Crc32Reader(data, checksum, ae2Encrypted)
+    }
 }

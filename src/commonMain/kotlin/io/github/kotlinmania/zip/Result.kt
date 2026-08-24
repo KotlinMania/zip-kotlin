@@ -2,11 +2,6 @@
 package io.github.kotlinmania.zip
 
 /**
- * Result type for zip operations.
- */
-public typealias ZipResult<T> = Result<T>
-
-/**
  * Error type for Zip archive operations.
  */
 public sealed class ZipError(
@@ -50,6 +45,22 @@ public sealed class ZipError(
          * Error message used when password is required to decrypt a file.
          */
         public const val PASSWORD_REQUIRED: String = "Password required to decrypt file"
+
+        /**
+         * Convert a [DateTimeRangeError] into a [ZipError.InvalidArchive].
+         */
+        public fun from(e: DateTimeRangeError): ZipError =
+            InvalidArchive(e.message ?: "DateTime range error")
+
+        /**
+         * Convert a generic [Throwable] into a [ZipError.Io].
+         */
+        public fun from(e: Throwable): ZipError =
+            when (e) {
+                is ZipError -> e
+                is DateTimeRangeError -> from(e)
+                else -> Io(e.message ?: e.toString(), e)
+            }
     }
 }
 

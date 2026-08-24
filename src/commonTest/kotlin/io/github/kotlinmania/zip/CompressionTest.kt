@@ -29,4 +29,31 @@ class CompressionTest {
         assertTrue(SUPPORTED_COMPRESSION_METHODS.contains(CompressionMethod.Zstd))
         assertTrue(SUPPORTED_COMPRESSION_METHODS.contains(CompressionMethod.Aes))
     }
+
+    @Test
+    fun testFromEqTo() {
+        for (v in 0..0xFFFF) {
+            val from = CompressionMethod.parseFromU16(v.toUShort())
+            val to = from.serializeToU16().toInt()
+            assertEquals(v, to)
+        }
+    }
+
+    @Test
+    fun testToEqFrom() {
+        for (method in SUPPORTED_COMPRESSION_METHODS) {
+            val to = method.serializeToU16()
+            val from = CompressionMethod.parseFromU16(to)
+            val back = from.serializeToU16()
+            assertEquals(to, back)
+        }
+    }
+
+    @Test
+    fun testToDisplayFmt() {
+        for (method in SUPPORTED_COMPRESSION_METHODS) {
+            val str = method.toString()
+            assertTrue(str.isNotEmpty())
+        }
+    }
 }
