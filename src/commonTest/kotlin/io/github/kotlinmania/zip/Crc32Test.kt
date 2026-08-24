@@ -34,4 +34,29 @@ class Crc32Test {
         assertEquals("123456789", readBytes.decodeToString())
         assertTrue(reader.checkMatches())
     }
+
+    @Test
+    fun testByteByByte() {
+        val data = "1234".encodeToByteArray()
+        val buf = ByteArray(1)
+
+        val reader = Crc32Reader.new(data, 0x9be3e0a3u, false)
+        assertEquals(1, reader.read(buf))
+        assertEquals(1, reader.read(buf))
+        assertEquals(1, reader.read(buf))
+        assertEquals(1, reader.read(buf))
+        assertEquals(0, reader.read(buf))
+        // Can keep reading 0 bytes after the end
+        assertEquals(0, reader.read(buf))
+    }
+
+    @Test
+    fun testZeroRead() {
+        val data = "1234".encodeToByteArray()
+        val buf = ByteArray(5)
+
+        val reader = Crc32Reader.new(data, 0x9be3e0a3u, false)
+        assertEquals(0, reader.read(buf, 0, 0))
+        assertEquals(4, reader.read(buf))
+    }
 }

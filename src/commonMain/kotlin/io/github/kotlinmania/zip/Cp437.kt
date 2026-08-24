@@ -2,6 +2,17 @@
 package io.github.kotlinmania.zip
 
 /**
+ * Trait to convert IBM codepage 437 to the target type.
+ */
+public interface FromCp437 {
+    /**
+     * Function that does the conversion from cp437.
+     * Generally allocations will be avoided if all data falls into the ASCII range.
+     */
+    public fun fromCp437(): String
+}
+
+/**
  * Converts IBM Code Page 437 encoded bytes to a UTF-8 [String].
  */
 public fun ByteArray.fromCp437(): String {
@@ -11,7 +22,7 @@ public fun ByteArray.fromCp437(): String {
     } else {
         val sb = StringBuilder(this.size)
         for (b in this) {
-            sb.append(cp437ToChar(b.toInt() and 0xFF))
+            sb.append(toChar(b))
         }
         sb.toString()
     }
@@ -22,6 +33,16 @@ public fun ByteArray.fromCp437(): String {
  */
 public fun List<Byte>.fromCp437(): String =
     this.toByteArray().fromCp437()
+
+/**
+ * Converts a CP437 byte value (0..255) to its corresponding Unicode [Char].
+ */
+public fun toChar(input: Byte): Char = cp437ToChar(input.toInt() and 0xFF)
+
+/**
+ * Converts a CP437 unsigned byte value (0..255) to its corresponding Unicode [Char].
+ */
+public fun toChar(input: UByte): Char = cp437ToChar(input.toInt())
 
 /**
  * Converts a CP437 byte value (0..255) to its corresponding Unicode [Char].

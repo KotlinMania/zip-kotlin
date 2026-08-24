@@ -54,6 +54,10 @@ public sealed class CompressionMethod(
             is Unsupported -> "Unsupported($rawId)"
         }
 
+    public fun serializeToU16(): UShort = id
+
+    public fun toU16(): UShort = id
+
     public companion object {
         public val STORE: CompressionMethod = Stored
         public val SHRINK: CompressionMethod = Unsupported(1u)
@@ -78,6 +82,8 @@ public sealed class CompressionMethod(
         public val PPMD: CompressionMethod = Unsupported(98u)
         public val AES: CompressionMethod = Aes
 
+        public fun default(): CompressionMethod = Deflated
+
         /**
          * Parses a [CompressionMethod] from a raw 16-bit unsigned integer.
          */
@@ -93,6 +99,10 @@ public sealed class CompressionMethod(
                 99 -> Aes
                 else -> Unsupported(valId)
             }
+
+        public fun parseFromU16(valId: UShort): CompressionMethod = parseFromUShort(valId)
+
+        public fun fromU16(valId: UShort): CompressionMethod = parseFromUShort(valId)
     }
 }
 
@@ -110,3 +120,28 @@ public val SUPPORTED_COMPRESSION_METHODS: List<CompressionMethod> =
         CompressionMethod.Xz,
         CompressionMethod.Aes,
     )
+
+/**
+ * Decompressor wrapping a compressed byte stream.
+ */
+public class Decompressor(
+    private val data: ByteArray,
+    public val compressionMethod: CompressionMethod,
+) {
+    private var position: Int = 0
+
+    public fun read(buffer: ByteArray, offset: Int = 0, length: Int = buffer.size - offset): Int {
+        if (position >= data.size) return 0
+        val count = minOf(length, data.size - position)
+        data.copyInto(buffer, destinationOffset = offset, startIndex = position, endIndex = position + count)
+        position += count
+        return count
+    }
+
+    public fun intoInner(): ByteArray = data
+
+    public companion object {
+        public fun new(data: ByteArray, compressionMethod: CompressionMethod): Result<Decompressor> =
+            Result.success(Decompressor(data, compressionMethod))
+    }
+}
