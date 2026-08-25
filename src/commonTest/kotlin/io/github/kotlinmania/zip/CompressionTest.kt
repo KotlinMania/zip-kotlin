@@ -7,7 +7,7 @@ import kotlin.test.assertTrue
 
 class CompressionTest {
     @Test
-    fun testCompressionMethods() {
+    fun compressionMethods() {
         assertEquals(CompressionMethod.Stored, CompressionMethod.parseFromUShort(0u))
         assertEquals(CompressionMethod.Deflated, CompressionMethod.parseFromUShort(8u))
         assertEquals(CompressionMethod.Deflate64, CompressionMethod.parseFromUShort(9u))
@@ -23,7 +23,7 @@ class CompressionTest {
     }
 
     @Test
-    fun testSupportedCompressionMethods() {
+    fun supportedCompressionMethods() {
         assertTrue(SUPPORTED_COMPRESSION_METHODS.contains(CompressionMethod.Stored))
         assertTrue(SUPPORTED_COMPRESSION_METHODS.contains(CompressionMethod.Deflated))
         assertTrue(SUPPORTED_COMPRESSION_METHODS.contains(CompressionMethod.Zstd))
@@ -31,7 +31,7 @@ class CompressionTest {
     }
 
     @Test
-    fun testFromEqTo() {
+    fun fromEqTo() {
         for (v in 0..0xFFFF) {
             val from = CompressionMethod.parseFromU16(v.toUShort())
             val to = from.serializeToU16().toInt()
@@ -39,18 +39,22 @@ class CompressionTest {
         }
     }
 
+    fun checkMatch(method: CompressionMethod) {
+        val to = method.serializeToU16()
+        val from = CompressionMethod.parseFromU16(to)
+        val back = from.serializeToU16()
+        assertEquals(to, back)
+    }
+
     @Test
-    fun testToEqFrom() {
+    fun toEqFrom() {
         for (method in SUPPORTED_COMPRESSION_METHODS) {
-            val to = method.serializeToU16()
-            val from = CompressionMethod.parseFromU16(to)
-            val back = from.serializeToU16()
-            assertEquals(to, back)
+            checkMatch(method)
         }
     }
 
     @Test
-    fun testToDisplayFmt() {
+    fun toDisplayFmt() {
         for (method in SUPPORTED_COMPRESSION_METHODS) {
             val str = method.toString()
             assertTrue(str.isNotEmpty())

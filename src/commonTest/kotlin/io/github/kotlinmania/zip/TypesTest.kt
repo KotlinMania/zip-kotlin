@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 class TypesTest {
     @Test
-    fun testSystem() {
+    fun system() {
         assertEquals(0u.toUByte(), System.Dos.code)
         assertEquals(3u.toUByte(), System.Unix.code)
         assertEquals(4u.toUByte(), System.Unknown.code)
@@ -20,7 +20,7 @@ class TypesTest {
     }
 
     @Test
-    fun testSanitize() {
+    fun sanitize() {
         val fileName = "/path/../../../../etc/./passwd\u0000/etc/shadow"
         val data =
             ZipFileData(
@@ -32,7 +32,7 @@ class TypesTest {
     }
 
     @Test
-    fun testDateTimeDefault() {
+    fun datetimeDefault() {
         val dt = DateTime.default()
         assertEquals(0, dt.timepart.toInt())
         assertEquals(0b0000000_0001_00001, dt.datepart.toInt())
@@ -40,7 +40,7 @@ class TypesTest {
     }
 
     @Test
-    fun testDateTimeMax() {
+    fun datetimeMax() {
         val dt = DateTime.fromDateAndTime(2107, 12, 31, 23, 59, 58).getOrThrow()
         assertEquals(0b10111_111011_11101, dt.timepart.toInt())
         assertEquals(0b1111111_1100_11111, dt.datepart.toInt())
@@ -48,14 +48,14 @@ class TypesTest {
     }
 
     @Test
-    fun testDateTimeEquality() {
+    fun datetimeEquality() {
         val dt = DateTime.fromDateAndTime(2018, 11, 17, 10, 38, 30).getOrThrow()
         assertEquals(dt, DateTime.fromDateAndTime(2018, 11, 17, 10, 38, 30).getOrThrow())
         assertNotEquals(dt, DateTime.default())
     }
 
     @Test
-    fun testDateTimeOrder() {
+    fun datetimeOrder() {
         val dt = DateTime.fromDateAndTime(2018, 11, 17, 10, 38, 30).getOrThrow()
         assertEquals(0, dt.compareTo(DateTime.fromDateAndTime(2018, 11, 17, 10, 38, 30).getOrThrow()))
 
@@ -87,7 +87,13 @@ class TypesTest {
     }
 
     @Test
-    fun testDateTimeBounds() {
+    fun datetimeDisplay() {
+        val dt = DateTime.fromDateAndTime(2018, 11, 17, 10, 38, 30).getOrThrow()
+        assertEquals("2018-11-17 10:38:30", dt.toString())
+    }
+
+    @Test
+    fun datetimeBounds() {
         assertTrue(DateTime.fromDateAndTime(2000, 1, 1, 23, 59, 60).isSuccess)
         assertFalse(DateTime.fromDateAndTime(2000, 1, 1, 24, 0, 0).isSuccess)
         assertFalse(DateTime.fromDateAndTime(2000, 1, 1, 0, 60, 0).isSuccess)
@@ -127,7 +133,40 @@ class TypesTest {
     }
 
     @Test
-    fun testTimeConversion() {
+    fun datetimeTryFromOffsetDatetime() {
+        val dt = DateTime.fromDateAndTime(2018, 11, 17, 10, 38, 30)
+        assertTrue(dt.isSuccess)
+    }
+
+    @Test
+    fun datetimeTryFromBounds() {
+        assertFalse(DateTime.fromDateAndTime(1979, 12, 31, 23, 59, 59).isSuccess)
+        assertTrue(DateTime.fromDateAndTime(1980, 1, 1, 0, 0, 0).isSuccess)
+        assertTrue(DateTime.fromDateAndTime(2107, 12, 31, 23, 59, 58).isSuccess)
+        assertFalse(DateTime.fromDateAndTime(2108, 1, 1, 0, 0, 0).isSuccess)
+    }
+
+    @Test
+    fun offsetDatetimeTryFromDatetime() {
+        val dt = DateTime.tryFromMsdos(0x4D71u, 0x54CFu).getOrThrow()
+        assertEquals(2018, dt.year())
+        assertEquals(11, dt.month())
+        assertEquals(17, dt.day())
+        assertEquals(10, dt.hour())
+        assertEquals(38, dt.minute())
+        assertEquals(30, dt.second())
+    }
+
+    @Test
+    fun offsetDatetimeTryFromBounds() {
+        val dtZero = DateTime.fromMsdosUnchecked(0x0000u, 0x0000u)
+        assertFalse(dtZero.isValid())
+        val dtMax = DateTime.fromMsdosUnchecked(0xFFFFu, 0xFFFFu)
+        assertFalse(dtMax.isValid())
+    }
+
+    @Test
+    fun timeConversion() {
         val dt = DateTime.tryFromMsdos(0x4D71u, 0x54CFu).getOrThrow()
         assertEquals(2018, dt.year())
         assertEquals(11, dt.month())
@@ -140,7 +179,34 @@ class TypesTest {
     }
 
     @Test
-    fun testAesMode() {
+    fun timeOutOfBounds() {
+        val dt = DateTime.fromMsdosUnchecked(0xFFFFu, 0xFFFFu)
+        assertEquals(2107, dt.year())
+        assertEquals(15, dt.month())
+        assertEquals(31, dt.day())
+        assertEquals(31, dt.hour())
+        assertEquals(63, dt.minute())
+        assertEquals(62, dt.second())
+        assertFalse(dt.isValid())
+
+        val dt2 = DateTime.fromMsdosUnchecked(0x0000u, 0x0000u)
+        assertEquals(1980, dt2.year())
+        assertEquals(0, dt2.month())
+        assertEquals(0, dt2.day())
+        assertEquals(0, dt2.hour())
+        assertEquals(0, dt2.minute())
+        assertEquals(0, dt2.second())
+        assertFalse(dt2.isValid())
+    }
+
+    @Test
+    fun timeAtJanuary() {
+        val dt = DateTime.fromDateAndTime(2020, 1, 1, 0, 0, 0)
+        assertTrue(dt.isSuccess)
+    }
+
+    @Test
+    fun aesMode() {
         assertEquals(16, AesMode.Aes128.keyLength())
         assertEquals(8, AesMode.Aes128.saltLength())
         assertEquals(24, AesMode.Aes192.keyLength())
