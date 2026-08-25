@@ -169,13 +169,13 @@ public data class Zip32CDEBlock(
  * Zip32 Central Directory End record with parsed comment.
  */
 public data class Zip32CentralDirectoryEnd(
-    public val diskNumber: UShort,
-    public val diskWithCentralDirectory: UShort,
-    public val numberOfFilesOnThisDisk: UShort,
-    public val numberOfFiles: UShort,
-    public val centralDirectorySize: UInt,
-    public val centralDirectoryOffset: UInt,
-    public val zipFileComment: ByteArray,
+    public val diskNumber: UShort = 0u,
+    public val diskWithCentralDirectory: UShort = 0u,
+    public val numberOfFilesOnThisDisk: UShort = 0u,
+    public val numberOfFiles: UShort = 0u,
+    public val centralDirectorySize: UInt = 0u,
+    public val centralDirectoryOffset: UInt = 0u,
+    public val zipFileComment: ByteArray = ByteArray(0),
 ) {
     public fun intoBlockAndComment(): Pair<Zip32CDEBlock, ByteArray> {
         val block =
