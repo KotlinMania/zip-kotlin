@@ -1,4 +1,4 @@
-// port-lint: source read/config.rs
+// port-lint: source zip/src/read/config.rs
 package io.github.kotlinmania.zip.read
 
 /**

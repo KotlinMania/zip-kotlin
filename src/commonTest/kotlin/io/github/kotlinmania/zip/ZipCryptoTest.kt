@@ -1,4 +1,4 @@
-// port-lint: tests zipcrypto.rs
+// port-lint: tests zip/src/zipcrypto.rs
 package io.github.kotlinmania.zip
 
 import kotlin.test.Test

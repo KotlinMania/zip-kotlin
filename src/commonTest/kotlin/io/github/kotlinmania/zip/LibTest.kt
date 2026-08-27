@@ -1,4 +1,4 @@
-// port-lint: tests lib.rs
+// port-lint: tests zip/src/lib.rs
 package io.github.kotlinmania.zip
 
 import kotlin.test.Test

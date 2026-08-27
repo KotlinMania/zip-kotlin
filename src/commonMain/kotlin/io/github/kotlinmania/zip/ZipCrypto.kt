@@ -1,4 +1,4 @@
-// port-lint: source zipcrypto.rs
+// port-lint: source zip/src/zipcrypto.rs
 package io.github.kotlinmania.zip
 
 /**
