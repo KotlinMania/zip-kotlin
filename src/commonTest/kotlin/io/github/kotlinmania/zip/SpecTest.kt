@@ -128,10 +128,11 @@ class SpecTest {
 
     @Test
     fun blockSerde() {
-        val block = TestBlock(
-            magic = TestBlock.MAGIC,
-            fileNameLength = 3u,
-        )
+        val block =
+            TestBlock(
+                magic = TestBlock.MAGIC,
+                fileNameLength = 3u,
+            )
         val bytes = block.toBytes()
         val block2 = TestBlock.parse(bytes)
         assertEquals(block, block2)

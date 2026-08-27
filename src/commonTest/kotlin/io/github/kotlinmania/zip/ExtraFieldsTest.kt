@@ -13,12 +13,22 @@ import kotlin.test.assertTrue
 class ExtraFieldsTest {
     @Test
     fun extendedTimestampTest() {
-        val bytes = byteArrayOf(
-            0x07, // flags: mod, ac, cr
-            0x10, 0x00, 0x00, 0x00, // mod_time = 16
-            0x20, 0x00, 0x00, 0x00, // ac_time = 32
-            0x30, 0x00, 0x00, 0x00, // cr_time = 48
-        )
+        val bytes =
+            byteArrayOf(
+                0x07, // flags: mod, ac, cr
+                0x10,
+                0x00,
+                0x00,
+                0x00, // mod_time = 16
+                0x20,
+                0x00,
+                0x00,
+                0x00, // ac_time = 32
+                0x30,
+                0x00,
+                0x00,
+                0x00, // cr_time = 48
+            )
         val res = ExtendedTimestamp.tryFromBytes(bytes, 0, 13u)
         assertTrue(res.isSuccess)
         val ts = res.getOrThrow()

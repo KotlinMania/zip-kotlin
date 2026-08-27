@@ -14,7 +14,6 @@ public data class Ntfs(
     public val atime: ULong,
     public val ctime: ULong,
 ) {
-
     public companion object {
         /**
          * Creates an NTFS extra field struct by reading the required bytes.
@@ -22,7 +21,7 @@ public data class Ntfs(
         public fun tryFromBytes(bytes: ByteArray, offset: Int, len: UShort): Result<Ntfs> {
             if (len.toInt() != 32) {
                 return Result.failure(
-                    ZipError.UnsupportedArchive("NTFS extra field has an unsupported length")
+                    ZipError.UnsupportedArchive("NTFS extra field has an unsupported length"),
                 )
             }
             if (offset + 32 > bytes.size) {
@@ -33,13 +32,13 @@ public data class Ntfs(
             val tag = readU16Le(bytes, offset + 4)
             if (tag.toInt() != 0x0001) {
                 return Result.failure(
-                    ZipError.UnsupportedArchive("NTFS extra field has an unsupported attribute tag")
+                    ZipError.UnsupportedArchive("NTFS extra field has an unsupported attribute tag"),
                 )
             }
             val size = readU16Le(bytes, offset + 6)
             if (size.toInt() != 24) {
                 return Result.failure(
-                    ZipError.UnsupportedArchive("NTFS extra field has an unsupported attribute size")
+                    ZipError.UnsupportedArchive("NTFS extra field has an unsupported attribute size"),
                 )
             }
 

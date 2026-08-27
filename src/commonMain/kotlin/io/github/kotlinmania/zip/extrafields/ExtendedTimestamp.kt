@@ -11,7 +11,6 @@ public data class ExtendedTimestamp(
     public val acTime: UInt? = null,
     public val crTime: UInt? = null,
 ) {
-
     public companion object {
         /**
          * Creates an extended timestamp struct by reading the required bytes from the buffer.
@@ -25,40 +24,43 @@ public data class ExtendedTimestamp(
 
             if (len.toInt() != 5 && len.toInt() != 1 + 4 * countOnes) {
                 return Result.failure(
-                    ZipError.UnsupportedArchive("flags and len don't match in extended timestamp field")
+                    ZipError.UnsupportedArchive("flags and len don't match in extended timestamp field"),
                 )
             }
 
             if ((flags and 0b11111000) != 0) {
                 return Result.failure(
-                    ZipError.UnsupportedArchive("found unsupported timestamps in the extended timestamp header")
+                    ZipError.UnsupportedArchive("found unsupported timestamps in the extended timestamp header"),
                 )
             }
 
             var currentOffset = offset + 1
-            val modTime = if ((flags and 0b00000001) != 0 || len.toInt() == 5) {
-                val t = readU32Le(bytes, currentOffset)
-                currentOffset += 4
-                t
-            } else {
-                null
-            }
+            val modTime =
+                if ((flags and 0b00000001) != 0 || len.toInt() == 5) {
+                    val t = readU32Le(bytes, currentOffset)
+                    currentOffset += 4
+                    t
+                } else {
+                    null
+                }
 
-            val acTime = if ((flags and 0b00000010) != 0 && len.toInt() > 5) {
-                val t = readU32Le(bytes, currentOffset)
-                currentOffset += 4
-                t
-            } else {
-                null
-            }
+            val acTime =
+                if ((flags and 0b00000010) != 0 && len.toInt() > 5) {
+                    val t = readU32Le(bytes, currentOffset)
+                    currentOffset += 4
+                    t
+                } else {
+                    null
+                }
 
-            val crTime = if ((flags and 0b00000100) != 0 && len.toInt() > 5) {
-                val t = readU32Le(bytes, currentOffset)
-                currentOffset += 4
-                t
-            } else {
-                null
-            }
+            val crTime =
+                if ((flags and 0b00000100) != 0 && len.toInt() > 5) {
+                    val t = readU32Le(bytes, currentOffset)
+                    currentOffset += 4
+                    t
+                } else {
+                    null
+                }
 
             return Result.success(ExtendedTimestamp(modTime, acTime, crTime))
         }

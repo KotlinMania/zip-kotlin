@@ -23,15 +23,21 @@ public sealed class ExtraField {
     /**
      * NTFS extra field.
      */
-    public data class NtfsField(public val ntfs: Ntfs) : ExtraField()
+    public data class NtfsField(
+        public val ntfs: Ntfs,
+    ) : ExtraField()
 
     /**
      * Extended timestamp.
      */
-    public data class ExtendedTimestampField(public val timestamp: ExtendedTimestamp) : ExtraField()
+    public data class ExtendedTimestampField(
+        public val timestamp: ExtendedTimestamp,
+    ) : ExtraField()
 
     /**
      * Unicode extra field.
      */
-    public data class UnicodeField(public val unicode: UnicodeExtraField) : ExtraField()
+    public data class UnicodeField(
+        public val unicode: UnicodeExtraField,
+    ) : ExtraField()
 }
