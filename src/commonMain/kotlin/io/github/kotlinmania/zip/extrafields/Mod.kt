@@ -1,4 +1,4 @@
-// port-lint: source zip/src/extra_fields/mod.rs
+// port-lint: source extra_fields/mod.rs
 package io.github.kotlinmania.zip.extrafields
 
 /**

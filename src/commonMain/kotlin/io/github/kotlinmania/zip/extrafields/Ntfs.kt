@@ -1,4 +1,4 @@
-// port-lint: source zip/src/extra_fields/ntfs.rs
+// port-lint: source extra_fields/ntfs.rs
 package io.github.kotlinmania.zip.extrafields
 
 import io.github.kotlinmania.zip.ZipError

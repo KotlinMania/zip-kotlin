@@ -1,4 +1,4 @@
-// port-lint: source zip/src/crc32.rs
+// port-lint: source crc32.rs
 package io.github.kotlinmania.zip
 
 /**
