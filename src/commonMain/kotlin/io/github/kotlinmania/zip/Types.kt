@@ -1,4 +1,4 @@
-// port-lint: source types.rs
+// port-lint: source zip/src/types.rs
 package io.github.kotlinmania.zip
 
 public object Ffi {

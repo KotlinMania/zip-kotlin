@@ -1,4 +1,4 @@
-// port-lint: source spec.rs
+// port-lint: source zip/src/spec.rs
 package io.github.kotlinmania.zip
 
 /**
