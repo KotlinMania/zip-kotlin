@@ -1,4 +1,4 @@
-// port-lint: tests zip/src/compression.rs
+// port-lint: tests compression.rs
 package io.github.kotlinmania.zip
 
 import kotlin.test.Test

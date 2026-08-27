@@ -1,4 +1,4 @@
-// port-lint: tests zip/src/crc32.rs
+// port-lint: tests crc32.rs
 package io.github.kotlinmania.zip
 
 import kotlin.test.Test

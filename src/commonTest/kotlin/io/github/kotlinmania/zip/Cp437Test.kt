@@ -1,4 +1,4 @@
-// port-lint: tests zip/src/cp437.rs
+// port-lint: tests cp437.rs
 package io.github.kotlinmania.zip
 
 import kotlin.test.Test

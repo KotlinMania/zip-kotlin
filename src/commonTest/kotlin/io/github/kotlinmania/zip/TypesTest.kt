@@ -1,4 +1,4 @@
-// port-lint: tests zip/src/types.rs
+// port-lint: tests types.rs
 package io.github.kotlinmania.zip
 
 import kotlin.test.Test

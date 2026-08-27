@@ -1,4 +1,4 @@
-// port-lint: source zip/src/extra_fields/extended_timestamp.rs
+// port-lint: source extra_fields/extended_timestamp.rs
 package io.github.kotlinmania.zip.extrafields
 
 import io.github.kotlinmania.zip.ZipError
