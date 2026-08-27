@@ -7,11 +7,13 @@ import kotlin.test.assertTrue
 
 public interface ZipStreamVisitor {
     public fun visitFile(file: Any?): Result<Unit> = Result.success(Unit)
+
     public fun visitAdditionalMetadata(metadata: Any?): Result<Unit> = Result.success(Unit)
 }
 
 public class DummyVisitor : ZipStreamVisitor {
     override fun visitFile(file: Any?): Result<Unit> = Result.success(Unit)
+
     override fun visitAdditionalMetadata(metadata: Any?): Result<Unit> = Result.success(Unit)
 }
 
@@ -33,13 +35,9 @@ public class CounterVisitor(
 public class V(
     public val filenames: MutableSet<String> = mutableSetOf(),
 ) : ZipStreamVisitor {
-    override fun visitFile(file: Any?): Result<Unit> {
-        return Result.success(Unit)
-    }
+    override fun visitFile(file: Any?): Result<Unit> = Result.success(Unit)
 
-    override fun visitAdditionalMetadata(metadata: Any?): Result<Unit> {
-        return Result.success(Unit)
-    }
+    override fun visitAdditionalMetadata(metadata: Any?): Result<Unit> = Result.success(Unit)
 }
 
 class StreamReadTest {

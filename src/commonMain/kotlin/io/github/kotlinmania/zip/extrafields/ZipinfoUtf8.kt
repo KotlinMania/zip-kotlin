@@ -19,7 +19,7 @@ public data class UnicodeExtraField(
         val actualCrc = Crc32Hasher.calculate(asciiField)
         if (crc32 != actualCrc) {
             return Result.failure(
-                ZipError.InvalidArchive("CRC32 checksum failed on Unicode extra field")
+                ZipError.InvalidArchive("CRC32 checksum failed on Unicode extra field"),
             )
         }
         return Result.success(content)
@@ -42,10 +42,11 @@ public data class UnicodeExtraField(
                 return Result.failure(ZipError.InvalidArchive("unexpected end of data"))
             }
             // Skip 1 byte version at offset
-            val crc32 = (bytes[offset + 1].toInt() and 0xFF).toUInt() or
-                ((bytes[offset + 2].toInt() and 0xFF).toUInt() shl 8) or
-                ((bytes[offset + 3].toInt() and 0xFF).toUInt() shl 16) or
-                ((bytes[offset + 4].toInt() and 0xFF).toUInt() shl 24)
+            val crc32 =
+                (bytes[offset + 1].toInt() and 0xFF).toUInt() or
+                    ((bytes[offset + 2].toInt() and 0xFF).toUInt() shl 8) or
+                    ((bytes[offset + 3].toInt() and 0xFF).toUInt() shl 16) or
+                    ((bytes[offset + 4].toInt() and 0xFF).toUInt() shl 24)
 
             val contentLen = len.toInt() - 5
             val content = bytes.copyOfRange(offset + 5, offset + 5 + contentLen)

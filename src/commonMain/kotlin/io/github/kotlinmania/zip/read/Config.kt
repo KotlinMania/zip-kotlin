@@ -19,7 +19,9 @@ public sealed class ArchiveOffset {
     /**
      * Specify a fixed archive offset.
      */
-    public data class Known(public val offset: ULong) : ArchiveOffset()
+    public data class Known(
+        public val offset: ULong,
+    ) : ArchiveOffset()
 }
 
 /**
