@@ -15,5 +15,9 @@
     "todos": true,
     "lint": true
   },
-  "reexport_modules": []
+  "reexport_modules": [
+    "lib",
+    "extra_fields/mod",
+    "extra_fields.mod"
+  ]
 }
