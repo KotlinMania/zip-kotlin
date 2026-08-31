@@ -1,4 +1,4 @@
-// port-lint: source cp437.rs
+// port-lint: source zip/src/cp437.rs
 package io.github.kotlinmania.zip
 
 /**
