@@ -17,7 +17,11 @@
   },
   "reexport_modules": [
     "lib",
+    "lib.rs",
+    "zip/src/lib.rs",
     "extra_fields/mod",
-    "extra_fields.mod"
+    "extra_fields.mod",
+    "extra_fields/mod.rs",
+    "zip/src/extra_fields/mod.rs"
   ]
 }
