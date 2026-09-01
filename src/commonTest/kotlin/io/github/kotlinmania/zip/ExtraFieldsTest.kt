@@ -1,4 +1,4 @@
-// port-lint: tests zip/src/extra_fields/mod.rs
+// port-lint: tests extra_fields/mod.rs
 package io.github.kotlinmania.zip
 
 import io.github.kotlinmania.zip.extrafields.ExtendedTimestamp
