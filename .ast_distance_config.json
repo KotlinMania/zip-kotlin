@@ -2,7 +2,7 @@
   "type": "port",
   "name": "zip-kotlin",
   "source": {
-    "path": "tmp",
+    "path": "tmp/zip/src",
     "lang": "rust"
   },
   "target": {

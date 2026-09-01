@@ -1,4 +1,4 @@
-// port-lint: source zip/src/extra_fields/zipinfo_utf8.rs
+// port-lint: source extra_fields/zipinfo_utf8.rs
 package io.github.kotlinmania.zip.extrafields
 
 import io.github.kotlinmania.zip.Crc32Hasher
