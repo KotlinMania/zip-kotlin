@@ -14,6 +14,10 @@ indexmap = "0.1.4"
 sha1 = "0.1.1"
 zeroize = "0.1.0"
 tempfile = "0.1.0"
+getrandom = "0.1.0"
+thiserror = "0.2.0"
+anyhow = "0.1.1"
+clap = "0.1.1"
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
@@ -37,6 +41,10 @@ indexmap = { module = "io.github.kotlinmania:indexmap-kotlin", version.ref = "in
 sha1 = { module = "io.github.kotlinmania:sha1-kotlin", version.ref = "sha1" }
 zeroize = { module = "io.github.kotlinmania:zeroize-kotlin", version.ref = "zeroize" }
 tempfile = { module = "io.github.kotlinmania:tempfile-kotlin", version.ref = "tempfile" }
+getrandom = { module = "io.github.kotlinmania:getrandom-kotlin", version.ref = "getrandom" }
+thiserror = { module = "io.github.kotlinmania:thiserror-kotlin", version.ref = "thiserror" }
+anyhow = { module = "io.github.kotlinmania:anyhow-kotlin", version.ref = "anyhow" }
+clap = { module = "io.github.kotlinmania:clap-kotlin", version.ref = "clap" }
 
 [bundles]
 zip-commonMain = [
@@ -46,9 +54,12 @@ zip-commonMain = [
   "kotlinx-datetime",
   "collections-immutable",
   "indexmap",
+  "getrandom",
+  "thiserror",
 ]
 zip-commonTest = [
   "constant-time-eq",
   "zeroize",
   "tempfile",
+  "anyhow",
 ]

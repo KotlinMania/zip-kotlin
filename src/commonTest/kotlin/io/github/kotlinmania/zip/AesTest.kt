@@ -34,4 +34,19 @@ class AesTest {
         key.zeroize()
         assertTrue(key.all { it == 0.toByte() })
     }
+
+    @Test
+    fun generateSaltForAesModes() {
+        for (mode in AesMode.entries) {
+            val salt = mode.generateSalt()
+            assertEquals(mode.saltLength(), salt.size)
+        }
+    }
+
+    @Test
+    fun fillRandomBytes() {
+        val buf = ByteArray(32)
+        fillRandom(buf)
+        assertEquals(32, buf.size)
+    }
 }

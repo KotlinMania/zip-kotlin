@@ -1,6 +1,7 @@
 // port-lint: source types.rs
 package io.github.kotlinmania.zip
 
+import io.github.kotlinmania.getrandom.getrandom
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
@@ -192,6 +193,22 @@ public enum class AesMode(
         }
 
     public fun saltLength(): Int = keyLength() / 2
+
+    /**
+     * Generates a cryptographically secure random salt of the appropriate length for this AES mode.
+     */
+    public fun generateSalt(): ByteArray {
+        val salt = ByteArray(saltLength())
+        getrandom(salt)
+        return salt
+    }
+}
+
+/**
+ * Fills [dest] with cryptographically secure random bytes using the platform getrandom source.
+ */
+public fun fillRandom(dest: ByteArray) {
+    getrandom(dest)
 }
 
 /**

@@ -39,11 +39,5 @@ public fun simplifiedComponents(input: String): List<String>? {
 }
 
 public object Path {
-    public fun sanitizePath(input: String): String {
-        var s = input.replace('\\', '/')
-        while (s.startsWith("/")) {
-            s = s.substring(1)
-        }
-        return s
-    }
+    public fun sanitizePath(input: String): String = pathToString(input)
 }

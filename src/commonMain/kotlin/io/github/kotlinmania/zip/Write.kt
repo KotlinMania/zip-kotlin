@@ -226,7 +226,7 @@ public class ZipWriter(
     }
 
     public fun startFileFromPath(path: String, options: SimpleFileOptions): Result<Unit> =
-        startFile(Path.sanitizePath(path), options)
+        startFile(pathToString(path), options)
 
     public fun write(data: ByteArray, offset: Int = 0, length: Int = data.size - offset): Result<Unit> {
         if (!writingToFile) {
