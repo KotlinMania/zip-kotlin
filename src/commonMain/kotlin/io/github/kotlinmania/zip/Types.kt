@@ -335,7 +335,10 @@ public data class ZipFileData(
     public fun unixMode(): UInt? {
         if (externalAttributes == 0u) return null
         return when (system) {
-            System.Unix -> externalAttributes shr 16
+            System.Unix -> {
+                externalAttributes shr 16
+            }
+
             System.Dos -> {
                 var mode =
                     if ((externalAttributes and 0x10u) == 0x10u) {
@@ -348,7 +351,10 @@ public data class ZipFileData(
                 }
                 mode
             }
-            else -> null
+
+            else -> {
+                null
+            }
         }
     }
 

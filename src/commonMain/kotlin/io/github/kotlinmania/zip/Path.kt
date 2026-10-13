@@ -21,12 +21,14 @@ public fun simplifiedComponents(input: String): List<String>? {
             "", "." -> {
                 // ignore empty and current dir components
             }
+
             ".." -> {
                 if (out.isEmpty()) {
                     return null
                 }
                 out.removeAt(out.lastIndex)
             }
+
             else -> {
                 out.add(part)
             }

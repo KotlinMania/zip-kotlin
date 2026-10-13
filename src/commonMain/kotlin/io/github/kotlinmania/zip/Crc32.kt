@@ -31,7 +31,7 @@ public class Crc32Hasher {
         private val CRC_TABLE: UIntArray =
             UIntArray(256) { i ->
                 var c = i.toUInt()
-                for (j in 0 until 8) {
+                repeat(8) {
                     c =
                         if ((c and 1u) != 0u) {
                             0xEDB88320u xor (c shr 1)
