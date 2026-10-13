@@ -1,6 +1,13 @@
 // port-lint: source types.rs
 package io.github.kotlinmania.zip
 
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
+
 public object Ffi {
     public const val S_IFDIR: UInt = 0x4000u
     public const val S_IFREG: UInt = 0x8000u
@@ -72,6 +79,16 @@ public class DateTime(
 
     override fun hashCode(): Int = 31 * datepart.hashCode() + timepart.hashCode()
 
+    @OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
+    @kotlin.native.HiddenFromObjC
+    public fun toLocalDateTime(): LocalDateTime =
+        LocalDateTime(year(), month(), day(), hour(), minute(), second())
+
+    @OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
+    @kotlin.native.HiddenFromObjC
+    public fun toInstant(timeZone: TimeZone = TimeZone.UTC): Instant =
+        toLocalDateTime().toInstant(timeZone)
+
     override fun toString(): String {
         val y = year().toString().padStart(4, '0')
         val m = month().toString().padStart(2, '0')
@@ -83,6 +100,26 @@ public class DateTime(
     }
 
     public companion object {
+        @OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
+        @kotlin.native.HiddenFromObjC
+        public fun fromLocalDateTime(dateTime: LocalDateTime): Result<DateTime> =
+            fromDateAndTime(
+                dateTime.year,
+                dateTime.month.number,
+                dateTime.day,
+                dateTime.hour,
+                dateTime.minute,
+                dateTime.second,
+            )
+
+        @OptIn(kotlin.experimental.ExperimentalObjCRefinement::class)
+        @kotlin.native.HiddenFromObjC
+        public fun fromInstant(
+            instant: Instant,
+            timeZone: TimeZone = TimeZone.UTC,
+        ): Result<DateTime> =
+            fromLocalDateTime(instant.toLocalDateTime(timeZone))
+
         /**
          * Default DateTime of 1980-01-01 00:00:00.
          */

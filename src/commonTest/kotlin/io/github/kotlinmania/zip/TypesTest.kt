@@ -1,6 +1,7 @@
 // port-lint: tests types.rs
 package io.github.kotlinmania.zip
 
+import kotlinx.datetime.number
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -213,5 +214,24 @@ class TypesTest {
         assertEquals(12, AesMode.Aes192.saltLength())
         assertEquals(32, AesMode.Aes256.keyLength())
         assertEquals(16, AesMode.Aes256.saltLength())
+    }
+
+    @Test
+    fun datetimeKotlinxConversions() {
+        val dt = DateTime.fromDateAndTime(2024, 6, 15, 12, 30, 44).getOrThrow()
+        val ldt = dt.toLocalDateTime()
+        assertEquals(2024, ldt.year)
+        assertEquals(6, ldt.month.number)
+        assertEquals(15, ldt.day)
+        assertEquals(12, ldt.hour)
+        assertEquals(30, ldt.minute)
+        assertEquals(44, ldt.second)
+
+        val roundtrip = DateTime.fromLocalDateTime(ldt).getOrThrow()
+        assertEquals(dt, roundtrip)
+
+        val instant = dt.toInstant(kotlinx.datetime.TimeZone.UTC)
+        val fromInst = DateTime.fromInstant(instant, kotlinx.datetime.TimeZone.UTC).getOrThrow()
+        assertEquals(dt, fromInst)
     }
 }

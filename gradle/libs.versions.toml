@@ -9,6 +9,11 @@ detekt = "2.0.0-alpha.6"
 ktlint = "14.2.0"
 ktlintEngine = "1.8.0"
 kotlinxBenchmark = "0.5.0"
+constantTimeEq = "0.1.1"
+indexmap = "0.1.4"
+sha1 = "0.1.1"
+zeroize = "0.1.0"
+tempfile = "0.1.0"
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
@@ -27,6 +32,11 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
 collections-immutable = { module = "org.jetbrains.kotlinx:kotlinx-collections-immutable", version.ref = "collectionsImmutable" }
 kotlinx-benchmark-runtime = { module = "org.jetbrains.kotlinx:kotlinx-benchmark-runtime", version.ref = "kotlinxBenchmark" }
+constant-time-eq = { module = "io.github.kotlinmania:constant-time-eq-kotlin", version.ref = "constantTimeEq" }
+indexmap = { module = "io.github.kotlinmania:indexmap-kotlin", version.ref = "indexmap" }
+sha1 = { module = "io.github.kotlinmania:sha1-kotlin", version.ref = "sha1" }
+zeroize = { module = "io.github.kotlinmania:zeroize-kotlin", version.ref = "zeroize" }
+tempfile = { module = "io.github.kotlinmania:tempfile-kotlin", version.ref = "tempfile" }
 
 [bundles]
 zip-commonMain = [
@@ -35,4 +45,10 @@ zip-commonMain = [
   "kotlinx-serialization-json",
   "kotlinx-datetime",
   "collections-immutable",
+  "indexmap",
+]
+zip-commonTest = [
+  "constant-time-eq",
+  "zeroize",
+  "tempfile",
 ]
