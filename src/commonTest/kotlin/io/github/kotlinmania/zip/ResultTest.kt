@@ -26,5 +26,15 @@ class ResultTest {
     fun testDateTimeRangeError() {
         val err = DateTimeRangeError()
         assertTrue(err.message!!.contains("bounds of the MS-DOS date range"))
+        val stdErr: io.github.kotlinmania.thiserror.StdError = err
+        assertEquals(null, stdErr.source())
+    }
+
+    @Test
+    fun testStdErrorIntegration() {
+        val ioErr = ZipError.Io("read error")
+        val stdErr: io.github.kotlinmania.thiserror.StdError = ioErr
+        assertEquals(null, stdErr.source())
+        assertEquals(stdErr, ioErr.asDynError())
     }
 }

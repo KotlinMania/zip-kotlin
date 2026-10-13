@@ -1,13 +1,18 @@
 // port-lint: source result.rs
 package io.github.kotlinmania.zip
 
+import io.github.kotlinmania.thiserror.StdError
+
 /**
  * Error type for Zip archive operations.
  */
 public sealed class ZipError(
     message: String,
     cause: Throwable? = null,
-) : Exception(message, cause) {
+) : Exception(message, cause),
+    StdError {
+    override fun source(): StdError? = cause as? StdError
+
     /**
      * An I/O error occurred during archive manipulation.
      */
@@ -69,4 +74,5 @@ public sealed class ZipError(
  */
 public class DateTimeRangeError(
     message: String = "a date could not be represented within the bounds of the MS-DOS date range (1980-2107)",
-) : Exception(message)
+) : Exception(message),
+    StdError
