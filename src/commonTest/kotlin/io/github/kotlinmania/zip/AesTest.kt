@@ -9,12 +9,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class AesTest {
-    // Unported: upstream roundtrip tests in aes.rs (crypt_aes256_0_byte, crypt_aes128_5_byte,
-    // crypt_aes192_5_byte, crypt_aes256_5_byte, crypt_aes128_40_byte, crypt_aes192_40_byte,
-    // crypt_aes256_40_byte) require AesWriter and AesReader, which are blocked on missing
-    // upstream cryptographic primitives (AES block cipher in CTR mode, PBKDF2-HMAC-SHA1, and HMAC-SHA1).
-    // Tracked on Hermes Kanban as task t_fbd21a54.
-
     @Test
     fun aesModeParameters() {
         assertEquals(16, AesMode.Aes128.keyLength())

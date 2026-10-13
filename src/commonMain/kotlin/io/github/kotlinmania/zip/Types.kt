@@ -468,19 +468,6 @@ public data class ZipFileData(
 }
 
 /**
- * Options for configuring how a file entry is added to a ZIP archive.
- */
-public data class FileOptions(
-    public val compressionMethod: CompressionMethod = CompressionMethod.Stored,
-    public val compressionLevel: Long? = null,
-    public val lastModifiedTime: DateTime = DateTime.default(),
-    public val permissions: UInt? = null,
-    public val largeFile: Boolean = false,
-    public val encryptWith: String? = null,
-    public val aesMode: AesMode? = null,
-)
-
-/**
  * Central Directory Entry block structure.
  */
 public data class ZipCentralEntryBlock(
@@ -660,16 +647,18 @@ public data class ZipLocalEntryBlock(
         bytes[15] = ((crc32.toInt() shr 8) and 0xFF).toByte()
         bytes[16] = ((crc32.toInt() shr 16) and 0xFF).toByte()
         bytes[17] = ((crc32.toInt() shr 24) and 0xFF).toByte()
-        bytes[20] = (compressedSize.toInt() and 0xFF).toByte()
-        bytes[21] = ((compressedSize.toInt() shr 8) and 0xFF).toByte()
-        bytes[22] = ((compressedSize.toInt() shr 16) and 0xFF).toByte()
-        bytes[23] = ((compressedSize.toInt() shr 24) and 0xFF).toByte()
-        bytes[24] = (uncompressedSize.toInt() and 0xFF).toByte()
-        bytes[25] = ((uncompressedSize.toInt() shr 8) and 0xFF).toByte()
-        bytes[26] = ((uncompressedSize.toInt() shr 16) and 0xFF).toByte()
-        bytes[27] = ((uncompressedSize.toInt() shr 24) and 0xFF).toByte()
-        bytes[28] = (fileNameLength.toInt() and 0xFF).toByte()
-        bytes[29] = ((fileNameLength.toInt() shr 8) and 0xFF).toByte()
+        bytes[18] = (compressedSize.toInt() and 0xFF).toByte()
+        bytes[19] = ((compressedSize.toInt() shr 8) and 0xFF).toByte()
+        bytes[20] = ((compressedSize.toInt() shr 16) and 0xFF).toByte()
+        bytes[21] = ((compressedSize.toInt() shr 24) and 0xFF).toByte()
+        bytes[22] = (uncompressedSize.toInt() and 0xFF).toByte()
+        bytes[23] = ((uncompressedSize.toInt() shr 8) and 0xFF).toByte()
+        bytes[24] = ((uncompressedSize.toInt() shr 16) and 0xFF).toByte()
+        bytes[25] = ((uncompressedSize.toInt() shr 24) and 0xFF).toByte()
+        bytes[26] = (fileNameLength.toInt() and 0xFF).toByte()
+        bytes[27] = ((fileNameLength.toInt() shr 8) and 0xFF).toByte()
+        bytes[28] = (extraFieldLength.toInt() and 0xFF).toByte()
+        bytes[29] = ((extraFieldLength.toInt() shr 8) and 0xFF).toByte()
         return bytes
     }
 

@@ -1,8 +1,6 @@
 // port-lint: tests write.rs
 package io.github.kotlinmania.zip
 
-import io.github.kotlinmania.indexmap.IndexMap
-import io.github.kotlinmania.indexmap.IndexSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -11,12 +9,18 @@ import kotlin.test.assertTrue
 class WriteTest {
     @Test
     fun writeEmptyZip() {
-        val block = Zip32CDEBlock()
-        assertEquals(0u.toUShort(), block.numberOfFiles)
+        val writer = ZipWriter.new()
+        writer.setComment("ZIP")
+        val result = writer.finish().getOrThrow()
+        assertEquals(25, result.size)
+        val expected = hexToBytes("504b05060000000000000000000000000000000003005a4950")
+        assertEquals(expected.toList(), result.toList())
     }
 
     @Test
     fun unixPermissionsBitmask() {
+        val options = SimpleFileOptions.default().unixPermissions(0x1EDu)
+        assertEquals(0x1EDu, options.permissions)
         assertEquals(0x4000u, Ffi.S_IFDIR)
         assertEquals(0x8000u, Ffi.S_IFREG)
         assertEquals(0xA000u, Ffi.S_IFLNK)
@@ -24,12 +28,47 @@ class WriteTest {
 
     @Test
     fun writeZipDir() {
-        assertTrue(isDir("testdir/"))
+        val writer = ZipWriter.new()
+        val dt = DateTime.fromDateAndTime(2018, 8, 15, 20, 45, 6).getOrThrow()
+        val options = SimpleFileOptions.default().lastModifiedTime(dt)
+        writer.addDirectory("test", options).getOrThrow()
+        assertTrue(writer.write("writing to a directory is not allowed".encodeToByteArray()).isFailure)
+        val result = writer.finish().getOrThrow()
+        assertEquals(108, result.size)
+        val expected =
+            hexToBytes(
+                "504b0304140000000000a3a50f4d00000000000000000000000005000000746573742f" +
+                    "504b01021403140000000000a3a50f4d000000000000000000000000050000000000000000000000ed4100000000746573742f" +
+                    "504b0506000000000100010033000000230000000000",
+            )
+        assertEquals(expected.toList(), result.toList())
     }
 
     @Test
     fun writeSymlinkSimple() {
-        assertTrue(isDir("symlink/"))
+        val writer = ZipWriter.new()
+        val dt = DateTime.fromDateAndTime(2018, 8, 15, 20, 45, 6).getOrThrow()
+        val options = SimpleFileOptions.default().lastModifiedTime(dt)
+        writer.addSymlink("name", "target", options).getOrThrow()
+        assertTrue(writer.write("writing to a symlink is not allowed".encodeToByteArray()).isFailure)
+        val result = writer.finish().getOrThrow()
+        assertEquals(112, result.size)
+        val expected =
+            hexToBytes(
+                "504b03040a0000000000a3a50f4dfc2f6f460600000006000000040000006e616d65746172676574" +
+                    "504b01020a030a0000000000a3a50f4dfc2f6f460600000006000000040000000000000000000000ffa1000000006e616d65" +
+                    "504b0506000000000100010032000000280000000000",
+            )
+        assertEquals(expected.toList(), result.toList())
+    }
+
+    private fun hexToBytes(hex: String): ByteArray {
+        val result = ByteArray(hex.length / 2)
+        for (i in result.indices) {
+            val idx = i * 2
+            result[i] = hex.substring(idx, idx + 2).toInt(16).toByte()
+        }
+        return result
     }
 
     @Test
@@ -63,23 +102,39 @@ class WriteTest {
 
     @Test
     fun testShallowCopy() {
-        val dt1 = DateTime.default()
-        val dt2 = DateTime.default()
-        assertEquals(dt1, dt2)
+        val writer = ZipWriter.new()
+        val text = "And I can't stop thinking about the moments that I lost to you"
+        val fileName1 = "subfolder/can't_stop.txt"
+        val fileName2 = "different_name.xyz"
+        writer.startFile(fileName1, SimpleFileOptions.default()).getOrThrow()
+        writer.write(text.encodeToByteArray()).getOrThrow()
+        writer.shallowCopyFile(fileName1, fileName2).getOrThrow()
+        val dup = writer.shallowCopyFile(fileName1, fileName2)
+        assertTrue(dup.isFailure)
+        assertEquals(2, writer.files.len())
+        val selfCopy = writer.shallowCopyFile(fileName2, fileName2)
+        assertTrue(selfCopy.isFailure)
     }
 
     @Test
     fun testDeepCopy() {
-        val magic = Magic.CENTRAL_DIRECTORY_HEADER_SIGNATURE
-        assertEquals(0x02014B50u, magic.value)
+        val writer = ZipWriter.new()
+        val text = "And I can't stop thinking about the moments that I lost to you"
+        val fileName1 = "subfolder/can't_stop.txt"
+        val fileName2 = "different_name.xyz"
+        writer.startFile(fileName1, SimpleFileOptions.default()).getOrThrow()
+        writer.write(text.encodeToByteArray()).getOrThrow()
+        writer.deepCopyFile(fileName1, fileName2).getOrThrow()
+        assertEquals(2, writer.files.len())
     }
 
     @Test
     fun duplicateFilenames() {
-        val names = IndexSet<String>()
-        names.insert("file1.txt")
-        names.insert("file2.txt")
-        assertEquals(2, names.len())
+        val writer = ZipWriter.new()
+        writer.startFile("foo/bar/test", SimpleFileOptions.default()).getOrThrow()
+        writer.write("The quick brown 🦊 jumps over the lazy 🐕".encodeToByteArray()).getOrThrow()
+        val err = writer.startFile("foo/bar/test", SimpleFileOptions.default())
+        assertTrue(err.isFailure)
     }
 
     @Test
@@ -115,12 +170,15 @@ class WriteTest {
 
     @Test
     fun removeShallowCopyKeepsOriginal() {
-        val map = IndexMap<String, Int>()
-        map.insert("a", 1)
-        map.insert("b", 2)
-        map.shiftRemove("a")
-        assertEquals(1, map.len())
-        assertEquals(2, map["b"])
+        val writer = ZipWriter.new()
+        val text = "And I can't stop thinking about the moments that I lost to you"
+        writer.startFile("original", SimpleFileOptions.default()).getOrThrow()
+        writer.write(text.encodeToByteArray()).getOrThrow()
+        writer.shallowCopyFile("original", "shallow_copy").getOrThrow()
+        writer.abortFile().getOrThrow()
+        assertEquals(1, writer.files.len())
+        assertTrue(writer.files.containsKey("original"))
+        assertFalse(writer.files.containsKey("shallow_copy"))
     }
 
     @Test
