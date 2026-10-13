@@ -1,6 +1,8 @@
 // port-lint: tests write.rs
 package io.github.kotlinmania.zip
 
+import io.github.kotlinmania.indexmap.IndexMap
+import io.github.kotlinmania.indexmap.IndexSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -74,8 +76,10 @@ class WriteTest {
 
     @Test
     fun duplicateFilenames() {
-        val names = setOf("file1.txt", "file2.txt")
-        assertEquals(2, names.size)
+        val names = IndexSet<String>()
+        names.insert("file1.txt")
+        names.insert("file2.txt")
+        assertEquals(2, names.len())
     }
 
     @Test
@@ -111,9 +115,12 @@ class WriteTest {
 
     @Test
     fun removeShallowCopyKeepsOriginal() {
-        val map = mutableMapOf("a" to 1, "b" to 2)
-        map.remove("a")
-        assertEquals(1, map.size)
+        val map = IndexMap<String, Int>()
+        map.insert("a", 1)
+        map.insert("b", 2)
+        map.shiftRemove("a")
+        assertEquals(1, map.len())
+        assertEquals(2, map["b"])
     }
 
     @Test
