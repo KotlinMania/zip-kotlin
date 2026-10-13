@@ -4,126 +4,190 @@ package io.github.kotlinmania.zip
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ReadTest {
     @Test
     fun invalidOffset() {
-        val magic = Magic.CENTRAL_DIRECTORY_END_SIGNATURE
-        assertEquals(0x06054B50u, magic.value)
+        val corruptedBytes = byteArrayOf(0x50, 0x4B, 0x05, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00)
+        val reader = ZipArchive.new(corruptedBytes)
+        assertTrue(reader.isFailure)
     }
 
     @Test
     fun invalidOffset2() {
-        val magic = Magic.ZIP64_CENTRAL_DIRECTORY_END_SIGNATURE
-        assertEquals(0x06064B50u, magic.value)
-    }
-
-    @Test
-    fun zip64WithLeadingJunk() {
-        val magic = Magic.ZIP64_CENTRAL_DIRECTORY_END_LOCATOR_SIGNATURE
-        assertEquals(0x07064B50u, magic.value)
+        val incompleteBytes = ByteArray(10) { 0 }
+        val reader = ZipArchive.new(incompleteBytes)
+        assertTrue(reader.isFailure)
     }
 
     @Test
     fun zipContents() {
-        val dt = DateTime.default()
-        assertEquals("1980-01-01 00:00:00", dt.toString())
-    }
+        val writer = ZipWriter.new()
+        writer.setRawComment("zip comment".encodeToByteArray())
+        writer.startFile("mimetype", SimpleFileOptions())
+        writer.write("application/epub+zip".encodeToByteArray())
+        val archiveBytes = writer.finish().getOrThrow()
 
-    @Test
-    fun zipReadStreaming() {
-        val block = Zip32CDEBlock()
-        assertEquals(Zip32CDEBlock.MAGIC, block.magic)
+        val archive = ZipArchive.new(archiveBytes).getOrThrow()
+        assertEquals(1, archive.len())
+        assertEquals("zip comment", archive.comment().decodeToString())
+
+        val file = archive.byIndex(0).getOrThrow()
+        assertEquals("mimetype", file.name())
+        assertEquals("application/epub+zip", file.readToString())
+        assertTrue(file.centralHeaderStart() > 0uL)
     }
 
     @Test
     fun zipClone() {
-        val dt = DateTime.default()
-        val dt2 = DateTime.default()
-        assertEquals(dt, dt2)
+        val writer = ZipWriter.new()
+        writer.startFile("entry.txt", SimpleFileOptions())
+        writer.write("hello world".encodeToByteArray())
+        val archiveBytes = writer.finish().getOrThrow()
+
+        val reader1 = ZipArchive.new(archiveBytes).getOrThrow()
+        val reader2 = reader1.clone()
+
+        assertEquals(reader1.len(), reader2.len())
+        assertEquals(reader1.comment().size, reader2.comment().size)
+
+        val file1 = reader1.byIndex(0).getOrThrow()
+        val file2 = reader2.byIndex(0).getOrThrow()
+
+        assertEquals(file1.name(), file2.name())
+        assertEquals(file1.readToString(), file2.readToString())
     }
 
     @Test
     fun fileAndDirPredicates() {
-        assertTrue(isDir("foo/bar/"))
-        assertFalse(isDir("foo/bar/file.txt"))
-    }
+        val writer = ZipWriter.new()
+        writer.addDirectory("dir/", SimpleFileOptions())
+        writer.addDirectory("dir/subdir/", SimpleFileOptions())
+        writer.startFile("dir/file.txt", SimpleFileOptions())
+        writer.write("content".encodeToByteArray())
+        writer.startFile("file2.txt", SimpleFileOptions())
+        writer.write("content2".encodeToByteArray())
+        val archiveBytes = writer.finish().getOrThrow()
 
-    @Test
-    fun zip64MagicInFilenames() {
-        val magic = Magic.ZIP64_CENTRAL_DIRECTORY_END_SIGNATURE
-        assertTrue(magic.value > 0u)
-    }
+        val zip = ZipArchive.new(archiveBytes).getOrThrow()
+        assertEquals(4, zip.len())
 
-    @Test
-    fun invalidCdeNumberOfFilesAllocationSmallerOffset() {
-        val block = Zip32CDEBlock(numberOfFiles = 100u, centralDirectoryOffset = 10u)
-        assertEquals(100u.toUShort(), block.numberOfFiles)
-    }
+        val dir = zip.byName("dir/").getOrThrow()
+        assertTrue(dir.isDir())
+        assertFalse(dir.isFile())
 
-    @Test
-    fun invalidCdeNumberOfFilesAllocationGreaterOffset() {
-        val block = Zip32CDEBlock(numberOfFiles = 10u, centralDirectoryOffset = 100u)
-        assertEquals(10u.toUShort(), block.numberOfFiles)
-    }
+        val subdir = zip.byName("dir/subdir/").getOrThrow()
+        assertTrue(subdir.isDir())
+        assertFalse(subdir.isFile())
 
-    @Test
-    fun deflate64IndexOutOfBounds() {
-        val cm = CompressionMethod.Deflate64
-        assertEquals(9u.toUShort(), cm.serializeToU16())
-    }
+        val file = zip.byName("dir/file.txt").getOrThrow()
+        assertFalse(file.isDir())
+        assertTrue(file.isFile())
 
-    @Test
-    fun deflate64NotEnoughSpace() {
-        val cm = CompressionMethod.Deflate64
-        assertEquals("Deflate64", cm.toString())
-    }
-
-    @Test
-    fun testReadWithDataDescriptor() {
-        val cm = CompressionMethod.Deflated
-        assertEquals(8u.toUShort(), cm.serializeToU16())
+        val file2 = zip.byName("file2.txt").getOrThrow()
+        assertFalse(file2.isDir())
+        assertTrue(file2.isFile())
     }
 
     @Test
     fun testIsSymlink() {
-        val s = System.Unix
-        assertEquals(3u.toUByte(), s.code)
-    }
+        val writer = ZipWriter.new()
+        writer.addSymlink("link", "target.txt", SimpleFileOptions())
+        val archiveBytes = writer.finish().getOrThrow()
 
-    @Test
-    fun testUtf8ExtraField() {
-        val magic = ExtraFieldMagic.ZIP64_EXTRA_FIELD_TAG
-        assertEquals(0x0001u.toUShort(), magic.value)
+        val zip = ZipArchive.new(archiveBytes).getOrThrow()
+        val symlink = zip.byName("link").getOrThrow()
+        assertTrue(symlink.isSymlink())
+        assertFalse(symlink.isDir())
+        assertFalse(symlink.isFile())
     }
 
     @Test
     fun testUtf8() {
-        val name = "你好.txt"
-        val data = ZipFileData(system = System.Unix, fileName = name, fileNameRaw = name.encodeToByteArray())
-        assertEquals(name, data.fileName)
+        val writer = ZipWriter.new()
+        writer.startFile("你好.txt", SimpleFileOptions())
+        writer.write("你好世界".encodeToByteArray())
+        val archiveBytes = writer.finish().getOrThrow()
+
+        val zip = ZipArchive.new(archiveBytes).getOrThrow()
+        val file = zip.byName("你好.txt").getOrThrow()
+        assertEquals("你好.txt", file.name())
+        assertEquals("你好世界", file.readToString())
     }
 
     @Test
     fun testUtf82() {
-        val name = "七个房间.txt"
-        val data = ZipFileData(system = System.Dos, fileName = name, fileNameRaw = name.encodeToByteArray())
-        assertEquals(name, data.fileName)
+        val writer = ZipWriter.new()
+        writer.startFile("七个房间.txt", SimpleFileOptions())
+        writer.write("测试数据".encodeToByteArray())
+        val archiveBytes = writer.finish().getOrThrow()
+
+        val zip = ZipArchive.new(archiveBytes).getOrThrow()
+        val file = zip.byName("七个房间.txt").getOrThrow()
+        assertEquals("七个房间.txt", file.name())
+        assertEquals("测试数据", file.readToString())
+    }
+
+    @Test
+    fun testAppend() {
+        val writer = ZipWriter.new()
+        writer.startFile("first.txt", SimpleFileOptions())
+        writer.write("111".encodeToByteArray())
+        val bytes1 = writer.finish().getOrThrow()
+
+        val writer2 = ZipWriter.newAppend(bytes1).getOrThrow()
+        writer2.startFile("second.txt", SimpleFileOptions())
+        writer2.write("222".encodeToByteArray())
+        val bytes2 = writer2.finish().getOrThrow()
+
+        val zip = ZipArchive.new(bytes2).getOrThrow()
+        assertEquals(2, zip.len())
+        assertEquals("111", zip.byName("first.txt").getOrThrow().readToString())
+        assertEquals("222", zip.byName("second.txt").getOrThrow().readToString())
+    }
+
+    @Test
+    fun testDecompressedSize() {
+        val writer = ZipWriter.new()
+        writer.startFile("a.txt", SimpleFileOptions())
+        writer.write("12345".encodeToByteArray())
+        writer.startFile("b.txt", SimpleFileOptions())
+        writer.write("67890".encodeToByteArray())
+        val bytes = writer.finish().getOrThrow()
+
+        val zip = ZipArchive.new(bytes).getOrThrow()
+        assertEquals(10uL, zip.decompressedSize())
+    }
+
+    @Test
+    fun testMergeArchive() {
+        val writer1 = ZipWriter.new()
+        writer1.startFile("file1.txt", SimpleFileOptions())
+        writer1.write("data1".encodeToByteArray())
+        val bytes1 = writer1.finish().getOrThrow()
+
+        val zip1 = ZipArchive.new(bytes1).getOrThrow()
+        val sink = ByteArrayZipSink()
+        val merged = zip1.mergeContents(sink).getOrThrow()
+        assertEquals(1, merged.len())
+        assertNotNull(merged.get("file1.txt"))
+    }
+
+    @Test
+    fun testFinishIntoReadable() {
+        val writer = ZipWriter.new()
+        writer.startFile("readable.txt", SimpleFileOptions())
+        writer.write("readable content".encodeToByteArray())
+        val archive = writer.finishIntoReadable().getOrThrow()
+
+        assertEquals(1, archive.len())
+        assertEquals("readable content", archive.byName("readable.txt").getOrThrow().readToString())
     }
 
     @Test
     fun test64kFiles() {
         assertEquals(0xFFFFu.toUShort(), ZIP64_ENTRY_THR)
-    }
-
-    @Test
-    fun testCannotSymlinkOutsideDestination() {
-        assertTrue(isDir("symlink/"))
-    }
-
-    @Test
-    fun testCanCreateDestination() {
-        assertFalse(isDir("mimetype"))
     }
 }

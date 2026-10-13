@@ -1,6 +1,10 @@
 // port-lint: source spec.rs
 package io.github.kotlinmania.zip
 
+import io.github.kotlinmania.zip.read.ArchiveOffset
+import io.github.kotlinmania.zip.read.MagicFinder
+import io.github.kotlinmania.zip.read.OptimisticMagicFinder
+
 /**
  * "Magic" header values used in the zip spec to locate metadata records.
  */
@@ -577,4 +581,189 @@ public object Spec {
     public const val EXTENDED_TIMESTAMP_EXTRA_FIELD_TAG: UShort = 0x5455u
     public const val INFOZIP_UNICODE_PATH_EXTRA_FIELD_TAG: UShort = 0x7075u
     public const val INFOZIP_UNICODE_COMMENT_EXTRA_FIELD_TAG: UShort = 0x6375u
+
+    public fun findCentralDirectory(
+        source: ZipSource,
+        archiveOffset: ArchiveOffset = ArchiveOffset.Detect,
+        endExclusive: ULong = source.size(),
+        fileLen: ULong = source.size(),
+    ): CentralDirectoryEndInfo {
+        val eocdSigBytes = Magic.CENTRAL_DIRECTORY_END_SIGNATURE.toLeBytes()
+        val eocd64SigBytes = Magic.ZIP64_CENTRAL_DIRECTORY_END_SIGNATURE.toLeBytes()
+        val cdfhSigBytes = Magic.CENTRAL_DIRECTORY_HEADER_SIGNATURE.toLeBytes()
+
+        val eocdFinder = MagicFinder(eocdSigBytes, 0uL, endExclusive, backwards = true)
+        var subfinder: OptimisticMagicFinder? = null
+        var parsingError: ZipError? = null
+
+        while (true) {
+            val eocdOffset = eocdFinder.next(source) ?: break
+
+            source.seek(eocdOffset)
+            val remaining = (source.size() - eocdOffset).toInt()
+            val eocdBytes = ByteArray(minOf(22 + 65535, remaining))
+            if (eocdBytes.size < 22) {
+                if (parsingError == null) {
+                    parsingError = ZipError.InvalidArchive("Unexpected EOF reading EOCD")
+                }
+                continue
+            }
+            source.readExact(eocdBytes, 0, eocdBytes.size)
+
+            val eocd =
+                try {
+                    Zip32CentralDirectoryEnd.parse(eocdBytes, 0)
+                } catch (e: ZipError) {
+                    if (parsingError == null) {
+                        parsingError = e
+                    }
+                    continue
+                }
+
+            if (eocd.zipFileComment.size.toULong() + eocdOffset + 22uL > fileLen) {
+                parsingError = ZipError.InvalidArchive("Invalid EOCD comment length")
+                continue
+            }
+
+            val zip64Metadata: Pair<ULong, Zip64CentralDirectoryEndLocator>? =
+                if (eocd.mayBeZip64()) {
+                    if (eocdOffset >= 20uL) {
+                        val locator64Offset = eocdOffset - 20uL
+                        source.seek(locator64Offset)
+                        val locBytes = ByteArray(20)
+                        source.readExact(locBytes)
+                        try {
+                            val loc = Zip64CentralDirectoryEndLocator.parse(locBytes, 0)
+                            Pair(locator64Offset, loc)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    } else {
+                        null
+                    }
+                } else {
+                    null
+                }
+
+            if (zip64Metadata == null) {
+                val relativeCdOffset = eocd.centralDirectoryOffset.toULong()
+
+                if (eocd.numberOfFiles == 0u.toUShort()) {
+                    val calculatedArchiveOffset =
+                        if (eocdOffset > relativeCdOffset) eocdOffset - relativeCdOffset else 0uL
+                    return CentralDirectoryEndInfo(
+                        eocd = Zip32DataAndPosition(eocd, eocdOffset),
+                        eocd64 = null,
+                        archiveOffset = calculatedArchiveOffset,
+                    )
+                }
+
+                if (relativeCdOffset >= eocdOffset) {
+                    parsingError = ZipError.InvalidArchive("Invalid CDFH offset in EOCD")
+                    continue
+                }
+
+                val finder =
+                    subfinder ?: OptimisticMagicFinder.newEmpty().also { subfinder = it }
+                val guessOffset =
+                    when (archiveOffset) {
+                        is ArchiveOffset.Known -> {
+                            Pair(minOf(eocdOffset, relativeCdOffset + archiveOffset.offset), true)
+                        }
+
+                        else -> {
+                            Pair(relativeCdOffset, false)
+                        }
+                    }
+                finder.repurpose(cdfhSigBytes, Pair(relativeCdOffset, eocdOffset), guessOffset)
+
+                val cdOffset = finder.next(source)
+                if (cdOffset != null) {
+                    val calculatedArchiveOffset = cdOffset - relativeCdOffset
+                    return CentralDirectoryEndInfo(
+                        eocd = Zip32DataAndPosition(eocd, eocdOffset),
+                        eocd64 = null,
+                        archiveOffset = calculatedArchiveOffset,
+                    )
+                }
+
+                parsingError = ZipError.InvalidArchive("No CDFH found")
+                continue
+            }
+
+            val (locator64Offset, locator64) = zip64Metadata
+
+            if (locator64.endOfCentralDirectoryOffset >= locator64Offset) {
+                parsingError = ZipError.InvalidArchive("Invalid EOCD64 Locator CD offset")
+                continue
+            }
+
+            if (locator64.numberOfDisks > 1u) {
+                parsingError = ZipError.InvalidArchive("Multi-disk ZIP files are not supported")
+                continue
+            }
+
+            val finder =
+                subfinder ?: OptimisticMagicFinder.newEmpty().also { subfinder = it }
+            val guessOffset =
+                when (archiveOffset) {
+                    is ArchiveOffset.Known -> {
+                        Pair(
+                            minOf(
+                                locator64Offset,
+                                locator64.endOfCentralDirectoryOffset + archiveOffset.offset,
+                            ),
+                            true,
+                        )
+                    }
+
+                    else -> {
+                        Pair(locator64.endOfCentralDirectoryOffset, false)
+                    }
+                }
+            finder.repurpose(
+                eocd64SigBytes,
+                Pair(locator64.endOfCentralDirectoryOffset, locator64Offset),
+                guessOffset,
+            )
+
+            var localError: ZipError? = null
+            while (true) {
+                val eocd64Offset = finder.next(source) ?: break
+                val calculatedArchiveOffset =
+                    eocd64Offset - locator64.endOfCentralDirectoryOffset
+                val expectedLength = locator64Offset - eocd64Offset
+
+                try {
+                    source.seek(eocd64Offset)
+                    val expectedInt = expectedLength.toInt()
+                    val eocd64Bytes = ByteArray(expectedInt)
+                    source.readExact(eocd64Bytes)
+                    val z64 = Zip64CentralDirectoryEnd.parse(eocd64Bytes, 0)
+
+                    if (z64.diskWithCentralDirectory != locator64.diskWithCentralDirectory) {
+                        throw ZipError.InvalidArchive(
+                            "Invalid EOCD64: inconsistency with Locator data",
+                        )
+                    }
+
+                    if (z64.recordSize + 12uL != expectedLength) {
+                        throw ZipError.InvalidArchive("Invalid EOCD64: inconsistent length")
+                    }
+
+                    return CentralDirectoryEndInfo(
+                        eocd = Zip32DataAndPosition(eocd, eocdOffset),
+                        eocd64 = Zip64DataAndPosition(z64, eocd64Offset),
+                        archiveOffset = calculatedArchiveOffset,
+                    )
+                } catch (e: ZipError) {
+                    localError = e
+                }
+            }
+
+            parsingError = localError ?: ZipError.InvalidArchive("Could not find EOCD64")
+        }
+
+        throw parsingError ?: ZipError.InvalidArchive("Could not find EOCD")
+    }
 }

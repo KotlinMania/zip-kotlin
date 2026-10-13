@@ -460,7 +460,34 @@ public class ZipWriter(
         return true
     }
 
+    public fun finishIntoReadable(): Result<ZipArchive> {
+        val finishRes = finish()
+        if (finishRes.isFailure) {
+            return Result.failure(finishRes.exceptionOrNull()!!)
+        }
+        val bytes = finishRes.getOrThrow()
+        return ZipArchive.new(bytes)
+    }
+
     public companion object {
         public fun new(sink: ZipSink = ByteArrayZipSink()): ZipWriter = ZipWriter(sink)
+
+        public fun newAppend(bytes: ByteArray): Result<ZipWriter> {
+            val archiveRes = ZipArchive.new(bytes)
+            if (archiveRes.isFailure) {
+                return Result.failure(archiveRes.exceptionOrNull()!!)
+            }
+            val archive = archiveRes.getOrThrow()
+            val sink = ByteArrayZipSink()
+            sink.write(bytes)
+            sink.truncate(archive.centralDirectoryStart())
+            val writer = ZipWriter(sink)
+            for ((name, file) in archive.shared.files.asEntries()) {
+                writer.files.insert(name, file)
+            }
+            writer.setRawComment(archive.comment())
+            archive.zip64Comment()?.let { writer.setRawZip64Comment(it) }
+            return Result.success(writer)
+        }
     }
 }

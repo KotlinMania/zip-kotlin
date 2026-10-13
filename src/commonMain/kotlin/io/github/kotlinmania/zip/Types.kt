@@ -465,6 +465,54 @@ public data class ZipFileData(
         result = 31 * result + fileName.hashCode()
         return result
     }
+
+    public companion object {
+        public fun fromLocalBlock(block: ZipLocalEntryBlock, source: ZipStreamSource): ZipFileData {
+            val encrypted = (block.flags.toInt() and 1) == 1
+            if (encrypted) {
+                throw ZipError.UnsupportedArchive("Encrypted files are not supported")
+            }
+            val usingDataDescriptor = (block.flags.toInt() and (1 shl 3)) != 0
+            if (usingDataDescriptor) {
+                throw ZipError.UnsupportedArchive("The file length is not available in the local header")
+            }
+            val isUtf8 = (block.flags.toInt() and (1 shl 11)) != 0
+            val compressionMethod = CompressionMethod.parseFromUShort(block.compressionMethod)
+            val fileNameRaw = ByteArray(block.fileNameLength.toInt())
+            source.readExact(fileNameRaw)
+            val extraField = ByteArray(block.extraFieldLength.toInt())
+            source.readExact(extraField)
+            val fileName =
+                if (isUtf8) {
+                    fileNameRaw.decodeToString()
+                } else {
+                    fileNameRaw.fromCp437()
+                }
+            val system = System.fromCode((block.versionMadeBy.toInt() shr 8).toUByte())
+            return ZipFileData(
+                system = system,
+                versionMadeBy = (block.versionMadeBy.toInt() and 0xFF).toUByte(),
+                encrypted = encrypted,
+                usingDataDescriptor = usingDataDescriptor,
+                isUtf8 = isUtf8,
+                compressionMethod = compressionMethod,
+                compressionLevel = null,
+                lastModifiedTime = DateTime.tryFromMsdos(block.lastModDate, block.lastModTime).getOrNull(),
+                crc32 = block.crc32,
+                compressedSize = block.compressedSize.toULong(),
+                uncompressedSize = block.uncompressedSize.toULong(),
+                fileName = fileName,
+                fileNameRaw = fileNameRaw,
+                extraField = extraField,
+                centralExtraField = null,
+                fileComment = "",
+                headerStart = 0uL,
+                dataStartOffset = null,
+                centralHeaderStart = 0uL,
+                externalAttributes = 0u,
+            )
+        }
+    }
 }
 
 /**
