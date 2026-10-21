@@ -1,0 +1,78 @@
+{
+  "coordinate": "io.github.kotlinmania:swift-export-embeddable:2.4.20-km.1",
+  "source_head": "3687a03e783c3f7215c431dc4600314a64678761",
+  "release": "https://github.com/KotlinMania/kotlin-swift-export-tooling/releases/tag/v2.4.20-km.1",
+  "maven_base": "https://repo.maven.apache.org/maven2/io/github/kotlinmania/swift-export-embeddable/2.4.20-km.1/",
+  "files": {
+    "swift-export-embeddable-2.4.20-km.1-javadoc.jar": "e9f4031419d4223ab17106996f2f57f728cda652fe2a16c2af89b634d7d0569e",
+    "swift-export-embeddable-2.4.20-km.1-native-sdk-helper.zip": "791b07cdd195008ad46f182693e3316747530fcb0b765478cb0201ac23cb2fb2",
+    "swift-export-embeddable-2.4.20-km.1-sbom.json": "a39d1122bcb85b4ed496a93b3b6c021bf885e52800d01a3a56e3d78c22318f80",
+    "swift-export-embeddable-2.4.20-km.1-sources.jar": "201b896f4aa305840dbe82196af4d6d85edd84cd04c3303e3da24c2ff0efc714",
+    "swift-export-embeddable-2.4.20-km.1.jar": "e1b871c93dd9556fb7235cd05f70b3c2bc7d32f2cb1b69f1d9161918fd088f3a",
+    "swift-export-embeddable-2.4.20-km.1.pom": "a149229ad82bb239bbe39419948d43b9ab37cb9f6f7e0f9117c762504e841bf8"
+  },
+  "worker_components": {
+    "io.github.kotlinmania:swift-export-embeddable:2.4.20-km.1": "e1b871c93dd9556fb7235cd05f70b3c2bc7d32f2cb1b69f1d9161918fd088f3a",
+    "com.github.ben-manes.caffeine:caffeine:2.9.3": "1e0a7bbef1dd791653143f3f05d0e489934bf5481e58a87c9e619cd46b68729b",
+    "org.checkerframework:checker-qual:3.43.0": "3fbc2e98f05854c3df16df9abaa955b91b15b3ecac33623208ed6424640ef0f6",
+    "com.google.errorprone:error_prone_annotations:2.28.0": "f3fc8a3a0a4020706a373b00e7f57c2512dd26d1f83d28c7d38768f8682b231e",
+    "org.jetbrains.kotlin:kotlin-compiler-embeddable:2.4.20": "cf97161430683fb9af96dc6a7017ffae1fe8737b80d12eee11f2fe3e76f8ded8",
+    "org.jetbrains.intellij.deps.kotlinx:kotlinx-coroutines-core-jvm:1.10.2-intellij-1": "1e9b4b60644ca8dd5e9687ad096aee0028bd9d3a24afed3e38565b22ca726ee0",
+    "org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:1.7.3": "f0adde45864144475385cf4aa7e0b7feb27f61fcf9472665ed98cc971b06b1eb",
+    "org.jetbrains.kotlin:kotlin-stdlib:2.4.20": "2226de463d309d4a5500a481320b3dea515a6981dcae1def531fbc158884e25f",
+    "io.opentelemetry:opentelemetry-api:1.41.0": "9336668f388de68a0a2c3e114154febd29db19a7644f27c4eba548f5de852258",
+    "org.jetbrains.kotlin:kotlin-build-tools-api:2.4.20": "47a622dce7231b1916334b69a00bc1094adf6577e6492f9f06b3d9c2450fe459",
+    "org.jetbrains.kotlin:kotlin-script-runtime:2.4.20": "fc5a19df78be445d84e8352e0d01098a6a8181324aa50c6f7bf850338e81e1b4",
+    "org.jetbrains.kotlin:kotlin-reflect:1.6.10": "3277ac102ae17aad10a55abec75ff5696c8d109790396434b496e75087854203",
+    "org.jetbrains.kotlin:kotlin-daemon-embeddable:2.4.20": "eef72cf8f17e6d98d33e5b7c7e1cab31a1cf5fc34084dd5e563e7b1f3ef53435",
+    "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.8.0": "9860906a1937490bf5f3b06d2f0e10ef451e65b95b269f22daf68a3d1f5065c5",
+    "org.jetbrains:annotations:23.0.0": "7b0f19724082cbfcbc66e5abea2b9bc92cf08a1ea11e191933ed43801eb3cd05",
+    "io.opentelemetry:opentelemetry-context:1.41.0": "5e3432a4464a432abfdab73be7142e516d25a84aa8426fce1192ffb0532faa35"
+  },
+  "retrieval_receipt_sha256": "ee3ed221eecccd1bd2dd78ece8470eefa163bc07e2d2318079502fb12cac37b1",
+  "resolved_worker_receipt_sha256": "b17aa63531ff3430e296a335b4b92b6c92b55d93d63068a913270cc9f98176a5",
+  "signing_public_key_fingerprint": "1B07CFB6CD172EF8B1E078A7BC3EFBDB5650D775",
+  "helper_source_sha256": {
+    "patches/KotlinBase.h.patch": "86295c6ad02441d080f8136dc4f5cb8dd0ed33f66aeff9caf271aa2d51f291fe",
+    "scripts/prepare_native_sdk.py": "c5a6f22b55cebaa21eef856cded66210b1dde4bc98ccb69046a2d498c6df1775"
+  },
+  "native_sdk_archive_url": "https://repo.maven.apache.org/maven2/org/jetbrains/kotlin/kotlin-native-prebuilt/2.4.20/kotlin-native-prebuilt-2.4.20-macos-aarch64.tar.gz",
+  "native_sdk_archive_sha256": "b70d4fd2855fdb054fc9604beaa7de83c18d786454ae948de72a226e81f07dc8",
+  "native_header_baseline_sha256": "14390b9a40bcd8f924909692249ca95468cd3de36157be762371b1673dab86f3",
+  "native_header_candidate_sha256": "99186d1dd029a8ba5b66dae390a3aec0d6d0e5293eff641d85daab5e212723c3",
+  "required_toolchain": {
+    "kgp": "2.4.20",
+    "kotlin_native": "2.4.20",
+    "dependency_swift_language_mode": "5",
+    "authored_consumer_swift_language_mode": "6",
+    "swift_warnings_as_errors": true,
+    "native_kotlin_warnings_as_errors": true,
+    "native_auto_cache_option": "-Xauto-cache-dir=<owned build output>"
+  },
+  "ci": {
+    "pr": "https://github.com/KotlinMania/kotlin-swift-export-tooling/actions/runs/39590144174",
+    "main": "https://github.com/KotlinMania/kotlin-swift-export-tooling/actions/runs/39591983416"
+  },
+  "main_native_swift_receipt_sha256": "6f97378c016801c1c2da0116750c81a78c2a4353c346bc76ee9299c3b034a1fd",
+  "acceptance": {
+    "consumer_source": "3d8718c2412be6aa99175ab88663edec8dbfa6db",
+    "native_arm64_compile_bridge_static_link": true,
+    "actual_unchanged_swift_cases": 3,
+    "failures": 0,
+    "skips": 0,
+    "sdk_files_unchanged": 40932,
+    "frontend_records": {
+      "dependency_mode5": 12,
+      "authored_mode6": 2,
+      "generated_runner_no_explicit_mode": 2
+    }
+  },
+  "limits": [
+    "Initial adoption ProcMacro2 only; actual production selection still requires owner validation",
+    "Not all-module Swift6 or arbitrary cross-actor/reverse callback safety",
+    "Not automatic generic Array lowering or recursive bound repair",
+    "No precompiled client ABI guarantee",
+    "No installed compiler overwrite; helper prepares separate SDK with all other bytes unchanged",
+    "ProcMacro2 corrected published root/target/Android metadata plus template guard required before Syn publication"
+  ]
+}

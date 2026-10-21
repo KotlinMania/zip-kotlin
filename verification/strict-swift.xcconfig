@@ -1,0 +1,4 @@
+// Generated dependencies use the published tooling's supported language mode.
+SWIFT_VERSION = 5
+SWIFT_TREAT_WARNINGS_AS_ERRORS = YES
+GCC_TREAT_WARNINGS_AS_ERRORS = YES

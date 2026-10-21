@@ -75,21 +75,8 @@ jobs:
       #     repo's `project.frameworkName` (the Swift Export module name).
       #   * Four `.swiftmodule/` directories: <Module>,
       #     KotlinRuntimeSupport, ExportedKotlinPackages, KotlinRuntime.
-      - name: Build Swift Export package
-        env:
-          BUILT_PRODUCTS_DIR: ${{ github.workspace }}/build/swift-test
-          TARGET_BUILD_DIR: ${{ github.workspace }}/build/swift-test
-          SDK_NAME: macosx
-          CONFIGURATION: Debug
-          ARCHS: arm64
-          FRAMEWORKS_FOLDER_PATH: Frameworks
-          MACOSX_DEPLOYMENT_TARGET: "15.0"
-          DEPLOYMENT_TARGET_SETTING_NAME: MACOSX_DEPLOYMENT_TARGET
-        run: ./gradlew embedSwiftExportForXcode --no-configuration-cache
-
-      - name: Run swift test against Kotlin-exported module
-        working-directory: swift-test-harness
-        run: swift test
+      - name: Run verified Native and Swift consumer gate
+        run: ./gradlew swiftExportSmokeTest --no-configuration-cache --no-daemon --max-workers=2
 
       - name: Upload Swift Export artifacts
         if: success() || failure()
