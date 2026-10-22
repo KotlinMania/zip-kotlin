@@ -138,7 +138,7 @@ val intellijCoroutinesVersion =
 val projectDependencyHandler = project.dependencies
 configurations.configureEach {
     if (name == "swiftExportClasspath") {
-        dependencies.add(projectDependencyHandler.create("io.github.kotlinmania:swift-export-embeddable:2.4.20-km.1"))
+        dependencies.add(projectDependencyHandler.create("io.github.kotlinmania:swift-export-embeddable:2.4.20-km.3"))
         dependencies.add(
             projectDependencyHandler.create(
                 "org.jetbrains.intellij.deps.kotlinx:kotlinx-coroutines-core-jvm:$intellijCoroutinesVersion",
@@ -1383,7 +1383,7 @@ val swiftSdkHelper =
     }
 dependencies.add(
     swiftSdkHelper.name,
-    "io.github.kotlinmania:swift-export-embeddable:2.4.20-km.1:native-sdk-helper@zip",
+    "io.github.kotlinmania:swift-export-embeddable:2.4.20-km.3:native-sdk-helper@zip",
 )
 val prepareSwiftExportTooling =
     tasks.register("prepareSwiftExportTooling") {
@@ -1508,7 +1508,7 @@ tasks.register("swiftExportSmokeTest") {
                 workingDir = projectDir
                 commandLine(
                     requireNotNull(gradle.gradleHomeDir).resolve("bin/gradle"),
-                    "embedSwiftExportForXcode",
+                    ":embedSwiftExportForXcode",
                     "--gradle-user-home",
                     layout.buildDirectory
                         .dir("swift-tooling/export-gradle-home")

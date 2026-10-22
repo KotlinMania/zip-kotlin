@@ -73,7 +73,7 @@ for row in worker:
     actual[row['coordinate']] = sha(row['path'])
 require(actual == LOCK['worker_components'], 'Published exporter worker closure differs from verified release')
 (root / 'verified-worker.json').write_text(json.dumps(actual, indent=2) + '\n')
-helper_name = 'swift-export-embeddable-2.4.20-km.1-native-sdk-helper.zip'
+helper_name = 'swift-export-embeddable-2.4.20-km.3-native-sdk-helper.zip'
 require(sha(args.helper) == LOCK['files'][helper_name], 'Published helper ZIP checksum mismatch')
 if not (root / 'helper').exists():
     with zipfile.ZipFile(args.helper) as archive:
